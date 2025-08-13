@@ -1,0 +1,360 @@
+/* Sardius Feed Plugin Admin Styles */
+
+.sardius-feed-settings {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sardius-feed-settings h2 {
+    margin-top: 0;
+    color: #333;
+    border-bottom: 2px solid #0073aa;
+    padding-bottom: 10px;
+}
+
+.sardius-feed-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.sardius-feed-stats {
+    display: flex;
+    gap: 30px;
+}
+
+.stat-item {
+    text-align: center;
+    padding: 10px 15px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 4px solid #0073aa;
+}
+
+.stat-item strong {
+    display: block;
+    font-size: 24px;
+    color: #0073aa;
+    margin-bottom: 5px;
+}
+
+#refresh-feed {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    font-size: 16px;
+}
+
+#refresh-feed .dashicons {
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.sardius-feed-filters {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.filter-row {
+    display: flex;
+    gap: 20px;
+    align-items: end;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 200px;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: #333;
+}
+
+.filter-group input,
+.filter-group select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+    outline: none;
+    border-color: #0073aa;
+    box-shadow: 0 0 0 2px rgba(0, 115, 170, 0.2);
+}
+
+#apply-filters,
+#clear-filters {
+    padding: 8px 16px;
+    height: 38px;
+    align-self: end;
+}
+
+#clear-filters {
+    margin-left: 10px;
+}
+
+.date-range-group {
+    min-width: 150px;
+}
+
+.date-range-group input[type="date"] {
+    width: 100%;
+}
+
+.sardius-feed-results {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.results-count {
+    padding: 15px 20px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #ddd;
+    font-weight: 600;
+    color: #333;
+}
+
+.media-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.media-item {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.media-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.media-thumbnail {
+    position: relative;
+    height: 180px;
+    background: #f5f5f5;
+    overflow: hidden;
+}
+
+.media-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+}
+
+.media-item:hover .media-thumbnail img {
+    transform: scale(1.05);
+}
+
+.no-thumbnail {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #999;
+}
+
+.no-thumbnail .dashicons {
+    font-size: 48px;
+}
+
+.media-duration {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.media-info {
+    padding: 15px;
+}
+
+.media-title {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    line-height: 1.4;
+}
+
+.media-title a {
+    color: #333;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.media-title a:hover {
+    color: #0073aa;
+}
+
+.media-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 15px;
+    font-size: 12px;
+    color: #666;
+}
+
+.media-date,
+.media-categories {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.media-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.media-actions .button {
+    flex: 1;
+    min-width: 80px;
+    text-align: center;
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.no-items {
+    padding: 60px 20px;
+    text-align: center;
+    color: #666;
+}
+
+.no-items p {
+    font-size: 16px;
+    margin: 0;
+}
+
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.loading-spinner {
+    text-align: center;
+    padding: 40px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.loading-spinner .dashicons {
+    font-size: 48px;
+    color: #0073aa;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+.loading-spinner p {
+    margin: 0;
+    font-size: 16px;
+    color: #333;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .sardius-feed-header {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+    
+    .sardius-feed-stats {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .filter-row {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .filter-group {
+        min-width: auto;
+    }
+    
+    .media-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+        padding: 15px;
+    }
+    
+    .media-actions {
+        flex-direction: column;
+    }
+}
+
+/* Success/Error Messages */
+.notice {
+    margin: 20px 0;
+    padding: 12px 15px;
+    border-radius: 4px;
+    border-left: 4px solid;
+}
+
+.notice-success {
+    background: #d4edda;
+    border-color: #28a745;
+    color: #155724;
+}
+
+.notice-error {
+    background: #f8d7da;
+    border-color: #dc3545;
+    color: #721c24;
+}
+
+.notice-info {
+    background: #d1ecf1;
+    border-color: #17a2b8;
+    color: #0c5460;
+} 
