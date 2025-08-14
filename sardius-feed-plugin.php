@@ -42,7 +42,12 @@ class SardiusFeedPlugin {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         add_shortcode('sardius_media_content', array($this, 'shortcode_media_content'));
+        add_shortcode('sardius_media_archive', array($this, 'shortcode_media_archive'));
         add_filter('body_class', array($this, 'filter_body_class'));
+        add_filter('archive_template', array($this, 'load_archive_template'));
+        add_filter('pre_handle_404', array($this, 'prevent_archive_404'), 10, 2);
+        add_action('updated_option', array($this, 'maybe_flush_on_slug_change'), 10, 3);
+        add_action('admin_init', array($this, 'ensure_rewrite_rules'));
         
         // Add settings
         add_action('admin_init', array($this, 'register_settings'));
@@ -83,6 +88,7 @@ class SardiusFeedPlugin {
     
     public function enqueue_scripts() {
         wp_enqueue_style('typekit-fonts', 'https://use.typekit.net/lkd1tkd.css', array(), null);
+        wp_enqueue_style('sardius-feed-frontend', SARDIUS_FEED_PLUGIN_URL . 'assets/css/frontend.css', array(), SARDIUS_FEED_VERSION);
         wp_enqueue_script('sardius-feed-frontend', SARDIUS_FEED_PLUGIN_URL . 'assets/js/frontend.js', array('jquery'), SARDIUS_FEED_VERSION, true);
         wp_localize_script('sardius-feed-frontend', 'sardius_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
@@ -142,6 +148,7 @@ class SardiusFeedPlugin {
         register_setting('sardius_feed_settings', 'sardius_feed_id');
         register_setting('sardius_feed_settings', 'sardius_media_slug');
         register_setting('sardius_feed_settings', 'sardius_elementor_template_id');
+        register_setting('sardius_feed_settings', 'sardius_archive_elementor_template_id');
         
         add_settings_section(
             'sardius_feed_api_settings',
@@ -385,20 +392,52 @@ class SardiusFeedPlugin {
         
         $filters = $_POST['filters'] ?? array();
         $filtered_items = $this->filter_items($feed_data['hits'], $filters);
+
+        // Prepare items for frontend rendering
+        $prepared_items = [];
+        foreach ($filtered_items as $item) {
+            $prepared_items[] = [
+                'pid' => $item['pid'],
+                'title' => $item['title'],
+                'url' => $this->get_media_url($item),
+                'thumbnail_url' => !empty($item['files'][0]['url']) ? $item['files'][0]['url'] : '',
+                'duration_formatted' => $this->format_duration($item['duration'] ?? 0),
+                'series' => $item['series'] ?? '',
+                'bible_reference' => !empty($item['metadata']['bibleReference']) ? implode(', ', $item['metadata']['bibleReference']) : '',
+                'air_date_formatted' => $this->format_date($item['airDate']),
+            ];
+        }
         
         wp_send_json_success(array(
-            'items' => $filtered_items,
-            'total' => count($filtered_items)
+            'items' => $prepared_items,
+            'total' => count($prepared_items)
         ));
     }
     
     private function filter_items($items, $filters) {
         $filtered = $items;
         
-        // Filter by series/category
+        // Filter by type (e.g. 'message', 'full_service', 'spanish')
+        if (!empty($filters['type'])) {
+            $filtered = array_filter($filtered, function($item) use ($filters) {
+                // This logic assumes that the type is stored in the tags or categories.
+                // You might need to adjust this depending on where this data is in your feed.
+                $type_tags = ['message', 'full service', 'spanish']; // Example tags
+                $item_tags = array_map('strtolower', $item['tags'] ?? []);
+                
+                if ($filters['type'] === 'message') {
+                    // Exclude 'full service' and 'spanish'
+                    return !in_array('full service', $item_tags) && !in_array('spanish', $item_tags);
+                }
+                
+                return in_array(strtolower($filters['type']), $item_tags);
+            });
+        }
+        
+        // Filter by series
         if (!empty($filters['category'])) {
             $filtered = array_filter($filtered, function($item) use ($filters) {
-                return in_array($filters['category'], $item['categories'] ?? array());
+                return $item['series'] === $filters['category'];
             });
         }
         
@@ -407,44 +446,19 @@ class SardiusFeedPlugin {
             $search_term = strtolower($filters['search']);
             $filtered = array_filter($filtered, function($item) use ($search_term) {
                 return strpos(strtolower($item['title']), $search_term) !== false ||
-                       strpos(strtolower($item['searchText'] ?? ''), $search_term) !== false;
+                       strpos(strtolower($item['searchText'] ?? ''), $search_term) !== false ||
+                       strpos(strtolower($item['series'] ?? ''), $search_term) !== false ||
+                       strpos(strtolower(implode(', ', $item['metadata']['bibleReference'] ?? [])), $search_term) !== false;
             });
         }
         
         // Filter by date range
-        if (!empty($filters['dateRange'])) {
+        if (!empty($filters['dateFrom']) && !empty($filters['dateTo'])) {
             $filtered = array_filter($filtered, function($item) use ($filters) {
                 $item_date = strtotime($item['airDate']);
-                $today = strtotime('today');
-                
-                switch ($filters['dateRange']) {
-                    case 'today':
-                        return date('Y-m-d', $item_date) === date('Y-m-d', $today);
-                    case 'week':
-                        $week_start = strtotime('monday this week');
-                        $week_end = strtotime('sunday this week');
-                        return $item_date >= $week_start && $item_date <= $week_end;
-                    case 'month':
-                        $month_start = strtotime('first day of this month');
-                        $month_end = strtotime('last day of this month');
-                        return $item_date >= $month_start && $item_date <= $month_end;
-                    case 'quarter':
-                        $quarter_start = strtotime('first day of january this year');
-                        $quarter_end = strtotime('last day of december this year');
-                        return $item_date >= $quarter_start && $item_date <= $quarter_end;
-                    case 'year':
-                        $year_start = strtotime('january 1 this year');
-                        $year_end = strtotime('december 31 this year');
-                        return $item_date >= $year_start && $item_date <= $year_end;
-                    case 'custom':
-                        if (!empty($filters['dateFrom']) && !empty($filters['dateTo'])) {
-                            $from_date = strtotime($filters['dateFrom']);
-                            $to_date = strtotime($filters['dateTo'] . ' 23:59:59');
-                            return $item_date >= $from_date && $item_date <= $to_date;
-                        }
-                        break;
-                }
-                return true;
+                $from_date = strtotime($filters['dateFrom']);
+                $to_date = strtotime($filters['dateTo'] . ' 23:59:59');
+                return $item_date >= $from_date && $item_date <= $to_date;
             });
         }
         
@@ -499,6 +513,53 @@ class SardiusFeedPlugin {
         $clean = trim($clean, '-');
         
         return strtolower($clean);
+    }
+
+    public function load_archive_template($template) {
+        if (is_post_type_archive('sardius_media')) {
+            $archive_template_id = intval(get_option('sardius_archive_elementor_template_id', 0));
+            if ($archive_template_id > 0) {
+                $elementor_archive = SARDIUS_FEED_PLUGIN_PATH . 'templates/archive-elementor.php';
+                if (file_exists($elementor_archive)) {
+                    return $elementor_archive;
+                }
+            } else {
+                $plugin_template = SARDIUS_FEED_PLUGIN_PATH . 'templates/archive-sardius_media.php';
+                if (file_exists($plugin_template)) {
+                    return $plugin_template;
+                }
+            }
+        }
+        return $template;
+    }
+
+    public function prevent_archive_404($preempt, $wp_query) {
+        $post_type = isset($wp_query->query['post_type']) ? $wp_query->query['post_type'] : '';
+        if ($post_type === 'sardius_media') {
+            // Ensure 200 OK for our virtual archive page
+            status_header(200);
+            $wp_query->is_404 = false;
+            return true; // short-circuit core 404 handling
+        }
+        return $preempt;
+    }
+
+    public function maybe_flush_on_slug_change($option, $old_value, $value) {
+        if ($option === 'sardius_media_slug' && $old_value !== $value) {
+            $this->add_rewrite_rules();
+            flush_rewrite_rules();
+        }
+    }
+
+    public function ensure_rewrite_rules() {
+        // Flush once per version and slug combo to avoid 404 on archive route
+        $marker = get_option('sardius_rewrite_initialized');
+        $current = SARDIUS_FEED_VERSION . '|' . $this->get_base_slug();
+        if ($marker !== $current) {
+            $this->add_rewrite_rules();
+            flush_rewrite_rules();
+            update_option('sardius_rewrite_initialized', $current);
+        }
     }
     
     public function format_duration($duration_ms) {
@@ -568,6 +629,11 @@ class SardiusFeedPlugin {
     public function add_rewrite_rules() {
         $base_slug = $this->get_base_slug();
         add_rewrite_rule(
+            '^' . preg_quote($base_slug, '/') . '/?$',
+            'index.php?post_type=sardius_media',
+            'top'
+        );
+        add_rewrite_rule(
             '^' . preg_quote($base_slug, '/') . '/([^/]+)/?$',
             'index.php?media_slug=$matches[1]',
             'top'
@@ -634,6 +700,10 @@ class SardiusFeedPlugin {
         return !empty($media_slug);
     }
 
+    private function is_media_archive_request() {
+        return is_post_type_archive('sardius_media');
+    }
+
     public function filter_body_class($classes) {
         if ($this->is_media_request()) {
             $classes[] = 'sardius-media-page';
@@ -667,6 +737,13 @@ class SardiusFeedPlugin {
                 }
             }
         }
+        if ($this->is_media_archive_request()) {
+            $classes[] = 'sardius-media-archive';
+            if (intval(get_option('sardius_archive_elementor_template_id', 0)) > 0) {
+                $classes[] = 'elementor-page';
+                $classes[] = 'elementor-template-full-width';
+            }
+        }
         return $classes;
     }
 
@@ -680,6 +757,114 @@ class SardiusFeedPlugin {
         }
         // Fallback to default PHP template rendering, but capture its core content only
         return $this->build_default_media_content_html(self::$current_media_item);
+    }
+
+    // Archive shortcode for Elementor archive template
+    public function shortcode_media_archive() {
+        $feed_data = $this->get_feed_data();
+        $items = $feed_data['hits'] ?? array();
+        
+        // Get all unique series for the filter dropdown
+        $all_series = [];
+        if (!empty($items)) {
+            foreach ($items as $item) {
+                if (!empty($item['series']) && !in_array($item['series'], $all_series)) {
+                    $all_series[] = $item['series'];
+                }
+            }
+            sort($all_series);
+        }
+        
+        ob_start();
+        ?>
+        <div class="sardius-media-archive-container">
+            <aside id="sardius-filters">
+                <div class="filter-group">
+                    <h3><?php _e('WATCH GRACE LIVE:', 'sardius-feed'); ?></h3>
+                    <p>SUNDAYS 9:00A & 10:40A CT</p>
+                    <a href="#" class="watch-now-button"><?php _e('WATCH NOW', 'sardius-feed'); ?></a>
+                </div>
+
+                <div class="filter-group">
+                    <h3><?php _e('SEARCH:', 'sardius-feed'); ?></h3>
+                    <div class="search-container">
+                        <input type="text" id="sardius-search" placeholder="<?php _e('All Messages...', 'sardius-feed'); ?>">
+                        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" fill="currentColor"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <h3><?php _e('SERIES:', 'sardius-feed'); ?></h3>
+                    <div class="autocomplete-container">
+                        <input type="text" id="sardius-series-filter" placeholder="<?php _e('Select Series', 'sardius-feed'); ?>" autocomplete="off">
+                        <div class="autocomplete-dropdown" id="series-dropdown" style="display: none;">
+                            <?php foreach ($all_series as $series) : ?>
+                                <div class="autocomplete-item" data-value="<?php echo esc_attr($series); ?>"><?php echo esc_html($series); ?></div>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <h3><?php _e('DATE RANGE:', 'sardius-feed'); ?></h3>
+                    <div class="date-range-fields">
+                        <input type="date" id="sardius-date-from" placeholder="From">
+                        <span>To</span>
+                        <input type="date" id="sardius-date-to" placeholder="To">
+                    </div>
+                </div>
+
+                <div class="filter-group" id="reset-filters-group" style="display: none;">
+                    <button id="reset-filters" class="reset-filters-button">
+                        <?php _e('Reset Filters', 'sardius-feed'); ?>
+                    </button>
+                </div>
+            </aside>
+
+            <div id="sardius-media-grid">
+                <?php if (!empty($items)) : ?>
+                    <?php foreach ($items as $item) : ?>
+                        <div class="sardius-media-item" data-id="<?php echo esc_attr($item['pid']); ?>">
+                            <div class="video-player-container">
+                                <?php 
+                                $thumbnail_url = !empty($item['files'][0]['url']) ? $item['files'][0]['url'] : '';
+                                $duration = $this->format_duration($item['duration'] ?? 0);
+                                $media_url = $this->get_media_url($item);
+                                
+                                if ($thumbnail_url) : ?>
+                                    <img src="<?php echo esc_url($thumbnail_url); ?>" alt="<?php echo esc_attr($item['title']); ?>" class="video-thumbnail" onclick="window.location.href='<?php echo esc_url($media_url); ?>'">
+                                <?php else : ?>
+                                    <div class="video-thumbnail" style="background-color: #333; display: flex; align-items: center; justify-content: center; color: white;" onclick="window.location.href='<?php echo esc_url($media_url); ?>'">
+                                        <span style="font-size: 48px;">▶</span>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="video-duration"><?php echo esc_html($duration); ?></div>
+                            </div>
+                            <div class="sardius-media-item-info">
+                                <h3><a href="<?php echo esc_url($media_url); ?>"><?php echo esc_html($item['title']); ?></a></h3>
+                                <div class="media-date"><?php echo esc_html($this->format_date($item['airDate'])); ?></div>
+                                <?php 
+                                $series = $item['series'] ?? '';
+                                $bible_reference = !empty($item['metadata']['bibleReference']) ? implode(', ', $item['metadata']['bibleReference']) : '';
+                                
+                                if ($series) : ?>
+                                    <p><strong><?php _e('Series:', 'sardius-feed'); ?></strong> <?php echo esc_html($series); ?></p>
+                                <?php endif; 
+                                if ($bible_reference) : ?>
+                                    <p><strong><?php _e('Text:', 'sardius-feed'); ?></strong> <?php echo esc_html($bible_reference); ?></p>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                <?php else : ?>
+                    <p><?php _e('No media items found.', 'sardius-feed'); ?></p>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php
+        return ob_get_clean();
     }
 
     private function build_default_media_content_html(array $media_item) {
@@ -766,6 +951,25 @@ class SardiusFeedPlugin {
 
 // Initialize the plugin
 new SardiusFeedPlugin();
+
+// Add a dummy post type to represent the feed items
+function sardius_media_post_type() {
+    $base_slug = get_option('sardius_media_slug', 'sardius-media');
+	register_post_type('sardius_media',
+		array(
+			'labels'      => array(
+				'name'          => __('Sardius Media', 'sardius-feed'),
+				'singular_name' => __('Sardius Media', 'sardius-feed'),
+			),
+            'public'      => true,
+            'has_archive' => true,
+            'rewrite'     => array('slug' => $base_slug),
+            'supports'    => array('title', 'editor', 'thumbnail'),
+            'show_in_menu'=> false,
+		)
+	);
+}
+add_action('init', 'sardius_media_post_type');
 
 // Add query vars
 add_filter('query_vars', function($vars) {

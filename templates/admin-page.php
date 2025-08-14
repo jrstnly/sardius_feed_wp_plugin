@@ -42,6 +42,9 @@ if ($feed_data) {
         if (isset($_POST['sardius_elementor_template_id'])) {
             update_option('sardius_elementor_template_id', intval($_POST['sardius_elementor_template_id']));
         }
+        if (isset($_POST['sardius_archive_elementor_template_id'])) {
+            update_option('sardius_archive_elementor_template_id', intval($_POST['sardius_archive_elementor_template_id']));
+        }
         echo '<div class="notice notice-success"><p>' . __('Settings saved successfully!', 'sardius-feed') . '</p></div>';
     }
     
@@ -51,6 +54,7 @@ if ($feed_data) {
     $plugin_instance = new SardiusFeedPlugin();
     $custom_template = get_option('sardius_media_template', '');
     $elementor_template_id = intval(get_option('sardius_elementor_template_id', 0));
+    $archive_elementor_template_id = intval(get_option('sardius_archive_elementor_template_id', 0));
     ?>
     
     <div class="sardius-feed-settings">
@@ -94,6 +98,15 @@ if ($feed_data) {
                     <td>
                         <input type="number" id="sardius_elementor_template_id" name="sardius_elementor_template_id" value="<?php echo esc_attr($elementor_template_id); ?>" class="small-text" min="0" />
                         <p class="description"><?php _e('Optional: Use an Elementor saved template (ID from Templates > Saved Templates). Inside that template, place the shortcode [sardius_media_content] where the content should render.', 'sardius-feed'); ?></p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="sardius_archive_elementor_template_id"><?php _e('Archive Elementor Template ID', 'sardius-feed'); ?></label>
+                    </th>
+                    <td>
+                        <input type="number" id="sardius_archive_elementor_template_id" name="sardius_archive_elementor_template_id" value="<?php echo esc_attr($archive_elementor_template_id); ?>" class="small-text" min="0" />
+                        <p class="description"><?php _e('Optional: Use an Elementor saved template for the list/archive page. Inside that template, place the shortcode [sardius_media_archive] where the archive grid should render.', 'sardius-feed'); ?></p>
                     </td>
                 </tr>
             </table>

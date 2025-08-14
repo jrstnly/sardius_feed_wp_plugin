@@ -1,0 +1,325 @@
+.sardius-media-archive-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    padding: 2rem;
+    font-family: "proxima-nova", sans-serif;
+}
+
+#sardius-filters {
+    flex: 1 1 300px;
+    max-width: 300px;
+    background-color: #f8f9fa;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-right: 2rem;
+}
+
+#sardius-media-grid {
+    flex: 3 1 600px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.sardius-media-item {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    background-color: #fff;
+    height: fit-content;
+    display: flex;
+    flex-direction: column;
+}
+
+.sardius-media-item .video-player-container {
+    position: relative;
+    padding-top: 56.25%; /* 16:9 Aspect Ratio */
+    background-color: #000;
+    overflow: hidden;
+}
+
+.sardius-media-item .video-player-container iframe,
+.sardius-media-item .video-player-container video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    object-fit: cover;
+}
+
+.sardius-media-item .video-thumbnail {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    cursor: pointer;
+}
+
+.sardius-media-item .video-duration {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.sardius-media-item-info {
+    padding: 1rem;
+    position: relative;
+}
+
+.sardius-media-item-info h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    padding-right: 80px; /* Make room for the date */
+}
+
+.sardius-media-item-info h3 a {
+    text-decoration: none;
+    color: #000;
+}
+
+.sardius-media-item-info p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #555;
+    line-height: 1.4;
+}
+
+.sardius-media-item-info .media-date {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-size: 0.8rem;
+    color: #777;
+    font-weight: 500;
+}
+
+#sardius-filters .filter-group {
+    margin-bottom: 2rem;
+}
+
+#sardius-filters h3 {
+    font-size: 0.875rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #333;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+#sardius-filters input[type="text"],
+#sardius-filters input[type="date"],
+#sardius-filters select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #fff;
+    font-size: 0.875rem;
+    color: #333;
+}
+
+#sardius-filters input[type="text"]:focus,
+#sardius-filters input[type="date"]:focus,
+#sardius-filters select:focus {
+    outline: none;
+    border-color: #007cba;
+    box-shadow: 0 0 0 2px rgba(0, 124, 186, 0.2);
+}
+
+#sardius-filters .date-range-fields {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+#sardius-filters .date-range-fields input[type="date"] {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+}
+
+#sardius-filters .date-range-fields span {
+    font-size: 0.875rem;
+    color: #666;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+#sardius-filters .filter-button {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    background-color: #fff;
+    color: #333;
+}
+
+#sardius-filters .filter-button.active {
+    background-color: #007cba;
+    color: #fff;
+    border-color: #007cba;
+}
+
+#sardius-filters .filter-button:not(.active):hover {
+    background-color: #f8f9fa;
+    border-color: #007cba;
+}
+
+.watch-now-button {
+    background-color: #6c757d;
+    color: #fff;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-align: center;
+    display: block;
+    text-decoration: none;
+    transition: background-color 0.2s ease;
+}
+
+.watch-now-button:hover {
+    background-color: #5a6268;
+    color: #fff;
+}
+
+.search-container {
+    position: relative;
+}
+
+#sardius-search {
+    padding-right: 2.5rem;
+}
+
+.search-icon {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: #007cba;
+    color: #fff;
+    padding: 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+}
+
+.search-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.search-icon:hover {
+    background-color: #005a8b;
+}
+
+.reset-filters-button {
+    background-color: #6c757d;
+    color: #fff;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-align: center;
+    transition: background-color 0.2s ease;
+}
+
+.reset-filters-button:hover {
+    background-color: #5a6268;
+    color: #fff;
+}
+
+.reset-filters-button:disabled {
+    background-color: #e9ecef;
+    color: #6c757d;
+    cursor: not-allowed;
+}
+
+.autocomplete-container {
+    position: relative;
+}
+
+.autocomplete-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.autocomplete-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #333;
+    border-bottom: 1px solid #f8f9fa;
+    transition: background-color 0.2s ease;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item:hover {
+    background-color: #f8f9fa;
+}
+
+.autocomplete-item.selected {
+    background-color: #007cba;
+    color: #fff;
+}
+
+.autocomplete-item.highlighted {
+    background-color: #e9ecef;
+}
+
+#sardius-series-filter {
+    border-radius: 4px 4px 0 0;
+}
+
+#sardius-series-filter:focus {
+    border-radius: 4px 4px 0 0;
+}
+
+.autocomplete-dropdown:not(:empty) + #sardius-series-filter {
+    border-radius: 4px 4px 0 0;
+}
