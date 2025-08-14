@@ -4,7 +4,7 @@
  * Plugin URI: https://sardius.media
  * Description: Pulls media from Sardius feed and creates virtual pages with filtering capabilities
  * Version: 1.0.0
- * Author: Your Name
+ * Author: JR Stanley
  * License: GPL v2 or later
  * Text Domain: sardius-feed
  */
@@ -37,7 +37,7 @@ class SardiusFeedPlugin {
         add_action('template_redirect', array($this, 'handle_virtual_pages'));
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('wp_ajax_sardius_refresh_feed', array($this, 'ajax_refresh_feed'));
-        
+        add_action('wp_ajax_sardius_get_filtered_items', array($this, 'ajax_get_filtered_items'));
         add_action('init', array($this, 'add_rewrite_rules'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
@@ -45,9 +45,13 @@ class SardiusFeedPlugin {
         add_filter('body_class', array($this, 'filter_body_class'));
         
         // Add settings
+        add_action('admin_init', array($this, 'register_settings'));
         
+        // Add sitemap generation
+        add_action('init', array($this, 'add_sitemap_endpoint'));
         
-        
+        // Include shortcodes
+        require_once SARDIUS_FEED_PLUGIN_PATH . 'includes/shortcodes.php';
         
         // Register activation/deactivation hooks
         register_activation_hook(__FILE__, array($this, 'activate'));
@@ -78,6 +82,7 @@ class SardiusFeedPlugin {
     }
     
     public function enqueue_scripts() {
+        wp_enqueue_style('typekit-fonts', 'https://use.typekit.net/lkd1tkd.css', array(), null);
         wp_enqueue_script('sardius-feed-frontend', SARDIUS_FEED_PLUGIN_URL . 'assets/js/frontend.js', array('jquery'), SARDIUS_FEED_VERSION, true);
         wp_localize_script('sardius-feed-frontend', 'sardius_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
@@ -582,59 +587,12 @@ class SardiusFeedPlugin {
         return $this->sanitize_base_slug($stored);
     }
 
-    public function get_default_media_template() {
-        $base_slug = $this->get_base_slug();
-        $default = <<<HTML
-<div class="sardius-media-single">
-  <div class="container">
-    <div class="media-header">
-      <h1 class="media-title">{title}</h1>
-      <div class="media-meta">
-        <span class="media-date"><strong>Air Date:</strong> {air_date}</span>
-        <span class="media-duration"><strong>Duration:</strong> {duration}</span>
-        {categories}
-      </div>
-    </div>
-    <div class="media-content">
-      <div class="media-player">{video_player}</div>
-      {description}
-      {download_links}
-    </div>
-    <div class="media-navigation">
-      <a href="{back_url}" class="button">Back to Media Library</a>
-    </div>
-  </div>
-</div>
-HTML;
-        return $default;
-    }
-
-    private function build_download_links_html(array $media_item) {
-        if (empty($media_item['bitrates']) || !is_array($media_item['bitrates'])) {
-            return '';
-        }
-        $links = array();
-        foreach ($media_item['bitrates'] as $bitrate) {
-            if (!empty($bitrate['url'])) {
-                $label = __('Download', 'sardius-feed');
-                if (!empty($bitrate['width']) && !empty($bitrate['height'])) {
-                    $label .= ' (' . intval($bitrate['width']) . 'x' . intval($bitrate['height']) . ')';
-                }
-                $links[] = '<a class="download-link" href="' . esc_url($bitrate['url']) . '" download target="_blank">' . esc_html($label) . '</a>';
-            }
-        }
-        if (empty($links)) {
-            return '';
-        }
-        return '<div class="media-downloads"><h3>' . esc_html__('Downloads', 'sardius-feed') . '</h3><div class="download-links">' . implode(' ', $links) . '</div></div>';
-    }
-
     public function build_video_player_html(array $media_item) {
         $account_id = get_option('sardius_account_id', '');
         $pid = $media_item['pid'] ?? '';
         if (!empty($account_id) && !empty($pid)) {
             $src = 'https://players.sardius.media/' . rawurlencode($account_id) . '/primary/asset/' . rawurlencode($pid);
-            return '<div style="position: relative; padding-top: 56.25%;"><iframe src="' . esc_url($src) . '" scrolling="no" style="border: none; position: absolute; top: 0; left: 0; height: 100%; width: 100%;" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen="true"></iframe></div>';
+            return '<div style="position: relative; padding-top: 56.25%;"><iframe src="' . esc_url($src) . '" scrolling="no" frameborder="0" style="border: 0; position: absolute; top: 0; left: 0; height: 100%; width: 100%;" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;" allowfullscreen="true"></iframe></div>';
         }
         // Fallback to direct video if iframe cannot be constructed
         $url = $media_item['media']['url'] ?? '';
@@ -666,7 +624,6 @@ HTML;
             '{thumbnail_url}' => esc_url(($media_item['files'][0]['url'] ?? '')),
             '{page_url}' => esc_url($this->get_media_url($media_item)),
             '{back_url}' => esc_url(admin_url('admin.php?page=sardius-feed')),
-            '{download_links}' => $this->build_download_links_html($media_item),
         );
         $html = strtr($template, $replacements);
         return $html;
@@ -733,15 +690,46 @@ HTML;
         $descriptionText = $media_item['searchText'] ?? '';
         $description = $descriptionText ? ('<div class="media-description"><h3>' . esc_html__('Description', 'sardius-feed') . '</h3><p>' . esc_html($descriptionText) . '</p></div>') : '';
         $video = $this->build_video_player_html($media_item);
-        $downloads = $this->build_download_links_html($media_item);
 
-        return '<div class="sardius-media-single"><div class="container">'
+        $style = '
+        <style>
+            .sardius-media-single .media-player {
+                background: #000;
+            }
+            .sardius-media-single .media-header {
+                background-color: #f7f7f7;
+                padding: 1.5rem;
+                border: 1px solid #e0e0e0;
+                border-top: 0;
+            }
+            .sardius-media-single .media-title {
+                font-size: 1.8rem;
+                font-weight: 600;
+                margin-top: 0;
+                margin-bottom: 0.5rem;
+            }
+            .sardius-media-single .media-meta {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 1rem;
+                font-size: 0.9rem;
+                color: #555;
+            }
+            .sardius-media-single .media-description {
+                padding: 1.5rem;
+                border: 1px solid #e0e0e0;
+                border-top: 0;
+            }
+        </style>
+        ';
+
+        return $style . '<div class="sardius-media-single"><div class="container">'
+            . '<div class="media-content"><div class="media-player">' . $video . '</div>'
             . '<div class="media-header"><h1 class="media-title">' . $title . '</h1>'
             . '<div class="media-meta"><span class="media-date"><strong>' . esc_html__('Air Date:', 'sardius-feed') . '</strong> ' . $airDate . '</span>'
             . '<span class="media-duration"><strong>' . esc_html__('Duration:', 'sardius-feed') . '</strong> ' . $duration . '</span>'
             . $categories . '</div></div>'
-            . '<div class="media-content"><div class="media-player">' . $video . '</div>'
-            . $description . $downloads . '</div></div></div>';
+            . $description . '</div></div></div>';
     }
     
     public function add_sitemap_endpoint() {

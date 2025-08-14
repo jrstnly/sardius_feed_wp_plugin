@@ -49,7 +49,6 @@ if ($feed_data) {
     $feed_id = get_option('sardius_feed_id', '');
     $media_slug = get_option('sardius_media_slug', 'sardius-media');
     $plugin_instance = new SardiusFeedPlugin();
-    $default_template = $plugin_instance->get_default_media_template();
     $custom_template = get_option('sardius_media_template', '');
     $elementor_template_id = intval(get_option('sardius_elementor_template_id', 0));
     ?>
@@ -95,15 +94,6 @@ if ($feed_data) {
                     <td>
                         <input type="number" id="sardius_elementor_template_id" name="sardius_elementor_template_id" value="<?php echo esc_attr($elementor_template_id); ?>" class="small-text" min="0" />
                         <p class="description"><?php _e('Optional: Use an Elementor saved template (ID from Templates > Saved Templates). Inside that template, place the shortcode [sardius_media_content] where the content should render.', 'sardius-feed'); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row" valign="top">
-                        <label for="sardius_media_template"><?php _e('Media Page Template (HTML)', 'sardius-feed'); ?></label>
-                    </th>
-                    <td>
-                        <textarea id="sardius_media_template" name="sardius_media_template" class="large-text code" rows="12" placeholder="<?php echo esc_attr($default_template); ?>"><?php echo esc_textarea($custom_template); ?></textarea>
-                        <p class="description"><?php _e('Customize the layout for the media item page. Available placeholders: {title}, {air_date}, {duration}, {categories}, {description}, {video_player}, {video_url}, {thumbnail_url}, {page_url}, {back_url}, {download_links}', 'sardius-feed'); ?></p>
                     </td>
                 </tr>
             </table>
