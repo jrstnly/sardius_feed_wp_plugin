@@ -14,7 +14,7 @@ A WordPress plugin that pulls media from the Sardius content feed and creates vi
 - **Download Support**: Direct download links for media files
 - **SEO Optimized**: SEO-friendly URLs, meta tags, and structured data
 - **Sitemap Generation**: Automatic XML sitemap at `/sardius-sitemap.xml`
-- **Pagination Support**: Handles large datasets with configurable pagination settings
+- **Pagination Support**: Handles large datasets with configurable pagination settings for both admin and frontend
 
 ## Installation
 
@@ -58,7 +58,11 @@ A WordPress plugin that pulls media from the Sardius content feed and creates vi
    - Click **View Page** to see the virtual page
    - Click **Watch** to view the video directly
    - Navigate through pages using the pagination controls at the bottom
-   - Configure items per page in the Pagination Settings section
+
+5. **Pagination Settings**:
+   - **Admin Items Per Page**: Configure how many items to show per page in the admin interface (10, 25, 50, or 100)
+   - **Frontend Items Per Page**: Configure how many items to show per page on the public archive page (6, 12, 18, 24, or 36)
+   - **Maximum Items to Keep**: Set the maximum number of items to fetch from the API (100-10,000)
 
 ### Frontend Search Interface
 
@@ -74,6 +78,30 @@ This provides visitors with:
 - **Date filtering**: Filter by time periods
 - **Sorting options**: Organize results by date or title
 - **Responsive design**: Works on all devices
+
+### Frontend Archive Pagination
+
+The archive page now includes pagination to improve performance and user experience:
+
+1. **Configurable Items Per Page**:
+   - Go to **Sardius Feed** > **Pagination Settings**
+   - Set **Frontend Items Per Page** (6, 12, 18, 24, or 36 items)
+   - Default is 12 items per page
+
+2. **Pagination Features**:
+   - **JavaScript-only pagination**: All pagination handled via AJAX for smooth user experience
+   - **No page reloads**: Instant page transitions with loading indicators
+   - **URL updates**: Page numbers are reflected in the URL for bookmarking and sharing
+   - **Filter integration**: Pagination works seamlessly with search and filtering
+   - **Responsive design**: Pagination controls adapt to mobile devices
+   - **Loading states**: Visual feedback during page transitions
+
+3. **Performance Benefits**:
+   - Faster initial page load (no more loading 1000+ items at once)
+   - Reduced memory usage
+   - Better user experience on slower connections
+   - Improved SEO with faster page load times
+   - Smooth loading transitions with visual feedback
 
 ### Virtual Pages
 

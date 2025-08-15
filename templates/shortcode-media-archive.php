@@ -9,6 +9,9 @@
 $feed_data = $plugin->get_feed_data();
 $items = $feed_data['hits'] ?? array();
 
+// Get pagination settings for initial load
+$items_per_page = intval(get_option('sardius_frontend_items_per_page', 12));
+
 // Get all unique series for the filter dropdown
 $all_series = [];
 if (!empty($items)) {
@@ -19,6 +22,9 @@ if (!empty($items)) {
     }
     sort($all_series);
 }
+
+// Create nonce for AJAX requests
+$frontend_nonce = wp_create_nonce('sardius_frontend_nonce');
 ?>
 
 <div class="sardius-media-archive-container">
@@ -75,42 +81,25 @@ if (!empty($items)) {
     </aside>
 
     <div id="sardius-media-grid">
-        <?php if (!empty($items)) : ?>
-            <?php foreach ($items as $item) : ?>
-                <div class="sardius-media-item" data-id="<?php echo esc_attr($item['pid']); ?>">
-                    <div class="video-player-container">
-                        <?php 
-                        $thumbnail_url = !empty($item['files'][0]['url']) ? $item['files'][0]['url'] : '';
-                        $duration = $plugin->format_duration($item['duration'] ?? 0);
-                        $media_url = $plugin->get_media_url($item);
-                        
-                        if ($thumbnail_url) : ?>
-                            <img src="<?php echo esc_url($thumbnail_url); ?>" alt="<?php echo esc_attr($item['title']); ?>" class="video-thumbnail" onclick="window.location.href='<?php echo esc_url($media_url); ?>'">
-                        <?php else : ?>
-                            <div class="video-thumbnail" style="background-color: #333; display: flex; align-items: center; justify-content: center; color: white;" onclick="window.location.href='<?php echo esc_url($media_url); ?>'">
-                                <span style="font-size: 48px;">▶</span>
-                            </div>
-                        <?php endif; ?>
-                        <div class="video-duration"><?php echo esc_html($duration); ?></div>
-                    </div>
-                    <div class="sardius-media-item-info">
-                        <h3><a href="<?php echo esc_url($media_url); ?>"><?php echo esc_html($item['title']); ?></a></h3>
-                        <div class="media-date"><?php echo esc_html($plugin->format_date($item['airDate'])); ?></div>
-                        <?php 
-                        $series = $item['series'] ?? '';
-                        $bible_reference = !empty($item['metadata']['bibleReference']) ? implode(', ', $item['metadata']['bibleReference']) : '';
-                        
-                        if ($series) : ?>
-                            <p><strong><?php _e('Series:', 'sardius-feed'); ?></strong> <?php echo esc_html($series); ?></p>
-                        <?php endif; 
-                        if ($bible_reference) : ?>
-                            <p><strong><?php _e('Text:', 'sardius-feed'); ?></strong> <?php echo esc_html($bible_reference); ?></p>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            <?php endforeach; ?>
-        <?php else : ?>
-            <p><?php _e('No media items found.', 'sardius-feed'); ?></p>
-        <?php endif; ?>
+        <!-- Content will be loaded via JavaScript -->
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p><?php _e('Loading media items...', 'sardius-feed'); ?></p>
+        </div>
     </div>
 </div>
+
+<div class="sardius-frontend-pagination" style="display: none;">
+    <!-- Pagination controls will be loaded via JavaScript -->
+</div>
+
+<script>
+// Store pagination data for AJAX requests
+window.sardiusPaginationData = {
+    currentPage: 1,
+    totalPages: 0,
+    itemsPerPage: <?php echo $items_per_page; ?>,
+    nonce: '<?php echo $frontend_nonce; ?>',
+    ajaxUrl: '<?php echo admin_url('admin-ajax.php'); ?>'
+};
+</script>

@@ -190,7 +190,7 @@
 }
 
 .watch-now-button {
-    background-color: #6c757d;
+    background-color: var(--e-global-color-primary, #007cba);
     color: #fff;
     width: 100%;
     padding: 0.75rem 1rem;
@@ -207,7 +207,8 @@
 }
 
 .watch-now-button:hover {
-    background-color: #5a6268;
+    background-color: var(--e-global-color-primary, #007cba);
+    filter: brightness(0.9);
     color: #fff;
 }
 
@@ -328,4 +329,110 @@
 
 .autocomplete-dropdown:not(:empty) + #sardius-series-filter {
     border-radius: 4px 4px 0 0;
+}
+
+/* Frontend Pagination Styles */
+.sardius-frontend-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+    padding: 1rem 0;
+    text-align: center;
+    width: 100%;
+}
+
+.sardius-frontend-pagination .pagination-button {
+    padding: 0.5rem 0.75rem;
+    border: none;
+    background: none;
+    color: #666;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 400;
+    cursor: pointer;
+    display: inline-block;
+    font-family: inherit;
+    transition: color 0.2s ease;
+    outline: none;
+    min-width: 2rem;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.sardius-frontend-pagination .pagination-button:hover {
+    color: var(--e-global-color-primary, #007cba);
+    border: none;
+    outline: none;
+}
+
+.sardius-frontend-pagination .pagination-numbers {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    width: 200px;
+    overflow: hidden;
+    position: relative;
+    scroll-behavior: smooth;
+    padding: 0 10px;
+}
+
+.sardius-frontend-pagination .current-page {
+    padding: 0.5rem 0.75rem;
+    background: none;
+    color: #000;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: inherit;
+    min-width: 2rem;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.sardius-frontend-pagination .prev-page,
+.sardius-frontend-pagination .next-page {
+    font-weight: 500;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    color: #666;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007cba;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive pagination */
+@media (max-width: 768px) {
+    .sardius-frontend-pagination {
+        gap: 0.75rem;
+    }
+    
+    .sardius-frontend-pagination .pagination-button {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
+    }
+    
+    .sardius-frontend-pagination .current-page {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
+    }
 }

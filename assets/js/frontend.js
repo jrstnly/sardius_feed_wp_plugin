@@ -449,4 +449,125 @@ jQuery(document).ready(function($) {
 
     // Initialize autocomplete
     initializeAutocomplete();
+    
+    // --- Sardius Media Archive Pagination ---
+    
+    // Check if pagination data is available
+    if (typeof window.sardiusPaginationData !== 'undefined') {
+        console.log('Sardius pagination data found:', window.sardiusPaginationData);
+        initializePagination();
+    } else {
+        console.log('No Sardius pagination data found');
+    }
+    
+    function initializePagination() {
+        const paginationData = window.sardiusPaginationData;
+        const $pagination = $('.sardius-frontend-pagination');
+        
+        // Load initial page
+        loadPage(1);
+        
+        // Scroll to center the active page on initial load
+        setTimeout(scrollToActivePage, 500);
+        
+        // Handle pagination button clicks
+        $pagination.on('click', '.pagination-button', function(e) {
+            e.preventDefault();
+            const $button = $(this);
+            const page = $button.data('page');
+            
+            if (page && page !== paginationData.currentPage) {
+                loadPage(page);
+            }
+        });
+        
+        // Function to scroll pagination to center the active page
+        function scrollToActivePage() {
+            const $paginationNumbers = $('.pagination-numbers');
+            const $currentPage = $('.current-page');
+            
+            if ($currentPage.length && $paginationNumbers.length) {
+                const containerWidth = $paginationNumbers.width();
+                const currentPageOffset = $currentPage.position().left;
+                const currentPageWidth = $currentPage.outerWidth();
+                const scrollLeft = currentPageOffset - (containerWidth / 2) + (currentPageWidth / 2);
+                
+                $paginationNumbers.scrollLeft(scrollLeft);
+            }
+        }
+        
+        // Handle AJAX pagination with filters
+        function loadPage(page, filters = {}) {
+            // Store current content for fallback
+            const currentContent = $grid.html();
+            
+            $.ajax({
+                url: paginationData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'sardius_get_frontend_paginated_items',
+                    nonce: paginationData.nonce,
+                    page: page,
+                    items_per_page: paginationData.itemsPerPage,
+                    filters: filters
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Update grid content
+                        $grid.html(response.data.items_html);
+                        
+                        // Update pagination
+                        if (response.data.pagination_html) {
+                            $pagination.html(response.data.pagination_html).show();
+                            // Scroll to center the active page after a brief delay to ensure DOM is updated
+                            setTimeout(scrollToActivePage, 100);
+                        } else {
+                            $pagination.hide();
+                        }
+                        
+                        // Update pagination data
+                        paginationData.currentPage = response.data.pagination.current_page;
+                        paginationData.totalPages = response.data.pagination.total_pages;
+                        
+                        // Scroll to top of grid smoothly
+                        $('html, body').animate({
+                            scrollTop: $grid.offset().top - 100
+                        }, 500);
+                        
+                        // Update URL without page reload (for bookmarking)
+                        const url = new URL(window.location);
+                        if (page > 1) {
+                            url.searchParams.set('page', page);
+                        } else {
+                            url.searchParams.delete('page');
+                        }
+                        window.history.pushState({page: page}, '', url);
+                    } else {
+                        // Keep current content on error
+                        console.error('Error loading page:', response);
+                    }
+                },
+                error: function() {
+                    // Keep current content on error
+                    console.error('Error loading page');
+                }
+            });
+        }
+        
+        // Override the existing applyFilters function to work with pagination
+        const originalApplyFilters = applyFilters;
+        applyFilters = function() {
+            // Reset to first page when applying filters
+            loadPage(1, filters);
+        };
+        
+        // Handle browser back/forward buttons
+        $(window).on('popstate', function(e) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const page = parseInt(urlParams.get('page')) || 1;
+            if (page !== paginationData.currentPage) {
+                loadPage(page, filters);
+            }
+        });
+    }
 }); 

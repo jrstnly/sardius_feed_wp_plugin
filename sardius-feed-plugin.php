@@ -39,6 +39,8 @@ class SardiusFeedPlugin {
         add_action('wp_ajax_sardius_refresh_feed', array($this, 'ajax_refresh_feed'));
         add_action('wp_ajax_sardius_get_filtered_items', array($this, 'ajax_get_filtered_items'));
         add_action('wp_ajax_sardius_get_paginated_items', array($this, 'ajax_get_paginated_items'));
+        add_action('wp_ajax_sardius_get_frontend_paginated_items', array($this, 'ajax_get_frontend_paginated_items'));
+        add_action('wp_ajax_nopriv_sardius_get_frontend_paginated_items', array($this, 'ajax_get_frontend_paginated_items'));
         add_action('init', array($this, 'add_rewrite_rules'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
@@ -81,6 +83,9 @@ class SardiusFeedPlugin {
         }
         if (get_option('sardius_admin_items_per_page', null) === null) {
             add_option('sardius_admin_items_per_page', 25); // Default: 25 items per page
+        }
+        if (get_option('sardius_frontend_items_per_page', null) === null) {
+            add_option('sardius_frontend_items_per_page', 12); // Default: 12 items per page
         }
         
         // Ensure our rewrite rules are registered before flushing
@@ -170,6 +175,7 @@ class SardiusFeedPlugin {
         register_setting('sardius_feed_settings', 'sardius_archive_elementor_template_id');
         register_setting('sardius_feed_settings', 'sardius_max_items');
         register_setting('sardius_feed_settings', 'sardius_admin_items_per_page');
+        register_setting('sardius_feed_settings', 'sardius_frontend_items_per_page');
         
         add_settings_section(
             'sardius_feed_api_settings',
@@ -215,6 +221,14 @@ class SardiusFeedPlugin {
             'sardius_admin_items_per_page',
             __('Admin Items Per Page', 'sardius-feed'),
             array($this, 'admin_items_per_page_field_callback'),
+            'sardius-feed',
+            'sardius_feed_pagination_settings'
+        );
+        
+        add_settings_field(
+            'sardius_frontend_items_per_page',
+            __('Frontend Items Per Page', 'sardius-feed'),
+            array($this, 'frontend_items_per_page_field_callback'),
             'sardius-feed',
             'sardius_feed_pagination_settings'
         );
@@ -264,6 +278,25 @@ class SardiusFeedPlugin {
         }
         echo '</select>';
         echo '<p class="description">' . __('Number of items to display per page in the admin interface.', 'sardius-feed') . '</p>';
+    }
+    
+    public function frontend_items_per_page_field_callback() {
+        $value = get_option('sardius_frontend_items_per_page', 12);
+        $options = array(
+            6 => __('6 items', 'sardius-feed'),
+            12 => __('12 items', 'sardius-feed'),
+            18 => __('18 items', 'sardius-feed'),
+            24 => __('24 items', 'sardius-feed'),
+            36 => __('36 items', 'sardius-feed')
+        );
+        
+        echo '<select id="sardius_frontend_items_per_page" name="sardius_frontend_items_per_page">';
+        foreach ($options as $count => $label) {
+            $selected = ($value == $count) ? 'selected' : '';
+            echo '<option value="' . esc_attr($count) . '" ' . $selected . '>' . esc_html($label) . '</option>';
+        }
+        echo '</select>';
+        echo '<p class="description">' . __('Number of items to display per page on the frontend archive page.', 'sardius-feed') . '</p>';
     }
     
     public function get_feed_data() {
@@ -597,6 +630,70 @@ class SardiusFeedPlugin {
         
         wp_send_json_success(array(
             'items' => $prepared_items,
+            'pagination' => array(
+                'total' => $paginated_data['total'],
+                'total_pages' => $paginated_data['total_pages'],
+                'current_page' => $paginated_data['current_page'],
+                'items_per_page' => $paginated_data['items_per_page']
+            )
+        ));
+    }
+    
+    public function ajax_get_frontend_paginated_items() {
+        error_log('Sardius: Frontend pagination AJAX request received');
+        check_ajax_referer('sardius_frontend_nonce', 'nonce');
+        
+        $page = intval($_POST['page'] ?? 1);
+        $items_per_page = intval($_POST['items_per_page'] ?? 12);
+        $filters = $_POST['filters'] ?? array();
+        
+        // Get all feed data first
+        $feed_data = $this->get_feed_data();
+        if (!$feed_data) {
+            wp_send_json_error('No feed data available');
+            return;
+        }
+        
+        $all_items = $feed_data['hits'];
+        
+        // Apply filters if provided
+        if (!empty($filters)) {
+            $all_items = $this->filter_items($all_items, $filters);
+        }
+        
+        // Calculate pagination for filtered data
+        $total_items = count($all_items);
+        $total_pages = ceil($total_items / $items_per_page);
+        $page = max(1, min($page, $total_pages));
+        
+        $offset = ($page - 1) * $items_per_page;
+        $paginated_items = array_slice($all_items, $offset, $items_per_page);
+        
+        $paginated_data = array(
+            'items' => $paginated_items,
+            'total' => $total_items,
+            'total_pages' => $total_pages,
+            'current_page' => $page,
+            'items_per_page' => $items_per_page
+        );
+        
+        // Generate HTML for items
+        ob_start();
+        if (!empty($paginated_data['items'])) {
+            foreach ($paginated_data['items'] as $item) {
+                $this->render_media_item_html($item);
+            }
+        } else {
+            echo '<p>' . __('No media items found.', 'sardius-feed') . '</p>';
+        }
+        $items_html = ob_get_clean();
+        
+        // Generate pagination HTML
+        $pagination_html = $this->render_frontend_pagination_html($paginated_data);
+        
+        wp_send_json_success(array(
+            'items_html' => $items_html,
+            'pagination_html' => $pagination_html,
             'pagination' => array(
                 'total' => $paginated_data['total'],
                 'total_pages' => $paginated_data['total_pages'],
@@ -966,6 +1063,71 @@ class SardiusFeedPlugin {
         $plugin = $this;
         include SARDIUS_FEED_PLUGIN_PATH . 'templates/shortcode-media-archive.php';
         return ob_get_clean();
+    }
+    
+    private function render_media_item_html($item) {
+        $thumbnail_url = !empty($item['files'][0]['url']) ? $item['files'][0]['url'] : '';
+        $duration = $this->format_duration($item['duration'] ?? 0);
+        $media_url = $this->get_media_url($item);
+        $series = $item['series'] ?? '';
+        $bible_reference = !empty($item['metadata']['bibleReference']) ? implode(', ', $item['metadata']['bibleReference']) : '';
+        ?>
+        <div class="sardius-media-item" data-id="<?php echo esc_attr($item['pid']); ?>">
+            <div class="video-player-container">
+                <?php if ($thumbnail_url) : ?>
+                    <img src="<?php echo esc_url($thumbnail_url); ?>" alt="<?php echo esc_attr($item['title']); ?>" class="video-thumbnail" onclick="window.location.href='<?php echo esc_url($media_url); ?>'">
+                <?php else : ?>
+                    <div class="video-thumbnail" style="background-color: #333; display: flex; align-items: center; justify-content: center; color: white;" onclick="window.location.href='<?php echo esc_url($media_url); ?>'">
+                        <span style="font-size: 48px;">▶</span>
+                    </div>
+                <?php endif; ?>
+                <div class="video-duration"><?php echo esc_html($duration); ?></div>
+            </div>
+            <div class="sardius-media-item-info">
+                <h3><a href="<?php echo esc_url($media_url); ?>"><?php echo esc_html($item['title']); ?></a></h3>
+                <div class="media-date"><?php echo esc_html($this->format_date($item['airDate'])); ?></div>
+                <?php if ($series) : ?>
+                    <p><strong><?php _e('Series:', 'sardius-feed'); ?></strong> <?php echo esc_html($series); ?></p>
+                <?php endif; 
+                if ($bible_reference) : ?>
+                    <p><strong><?php _e('Text:', 'sardius-feed'); ?></strong> <?php echo esc_html($bible_reference); ?></p>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php
+    }
+    
+    private function render_frontend_pagination_html($paginated_data) {
+        if ($paginated_data['total_pages'] <= 1) {
+            return '';
+        }
+        
+        $html = '<div class="sardius-frontend-pagination">';
+        
+        if ($paginated_data['current_page'] > 1) {
+            $html .= '<button class="pagination-button prev-page" data-page="' . ($paginated_data['current_page'] - 1) . '">' . __('Previous', 'sardius-feed') . '</button>';
+        }
+        
+        $html .= '<div class="pagination-numbers">';
+        
+        // Render all page numbers
+        for ($i = 1; $i <= $paginated_data['total_pages']; $i++) {
+            if ($i == $paginated_data['current_page']) {
+                $html .= '<span class="current-page" data-page="' . $i . '">' . $i . '</span>';
+            } else {
+                $html .= '<button class="pagination-button page-number" data-page="' . $i . '">' . $i . '</button>';
+            }
+        }
+        
+        $html .= '</div>';
+        
+        if ($paginated_data['current_page'] < $paginated_data['total_pages']) {
+            $html .= '<button class="pagination-button next-page" data-page="' . ($paginated_data['current_page'] + 1) . '">' . __('Next', 'sardius-feed') . '</button>';
+        }
+        
+        $html .= '</div>';
+        
+        return $html;
     }
 
     private function build_default_media_content_html(array $media_item) {
