@@ -69,7 +69,7 @@ if (!empty($items)) {
 
         <div class="filter-group" id="reset-filters-group" style="display: none;">
             <button id="reset-filters" class="reset-filters-button">
-                <?php _e('Reset Filters', 'sardius-feed'); ?>
+                <?php _e('Clear Filters', 'sardius-feed'); ?>
             </button>
         </div>
     </aside>
