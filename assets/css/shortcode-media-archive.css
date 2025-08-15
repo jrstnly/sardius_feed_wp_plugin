@@ -9,12 +9,14 @@
 }
 
 #sardius-filters {
-    flex: 1 1 300px;
+    flex: 0 0 300px;
     max-width: 300px;
     background-color: #f8f9fa;
     padding: 2rem;
     border-radius: 8px;
     margin-right: 2rem;
+    height: fit-content;
+    align-self: flex-start;
 }
 
 #sardius-media-grid {
