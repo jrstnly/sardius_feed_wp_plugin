@@ -45,6 +45,9 @@ if ($feed_data) {
         if (isset($_POST['sardius_archive_elementor_template_id'])) {
             update_option('sardius_archive_elementor_template_id', intval($_POST['sardius_archive_elementor_template_id']));
         }
+        if (isset($_POST['sardius_feed_refresh_interval'])) {
+            update_option('sardius_feed_refresh_interval', intval($_POST['sardius_feed_refresh_interval']));
+        }
         echo '<div class="notice notice-success"><p>' . __('Settings saved successfully!', 'sardius-feed') . '</p></div>';
     }
     
@@ -114,6 +117,70 @@ if ($feed_data) {
         </form>
     </div>
     
+    <div class="sardius-feed-settings">
+        <h2><?php _e('Auto-Refresh Configuration', 'sardius-feed'); ?></h2>
+        <form method="post" action="">
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="sardius_feed_refresh_interval"><?php _e('Refresh Interval', 'sardius-feed'); ?></label>
+                    </th>
+                    <td>
+                        <?php 
+                        $refresh_interval = get_option('sardius_feed_refresh_interval', 3600);
+                        $intervals = array(
+                            900 => __('15 minutes', 'sardius-feed'),
+                            1800 => __('30 minutes', 'sardius-feed'),
+                            3600 => __('1 hour', 'sardius-feed'),
+                            7200 => __('2 hours', 'sardius-feed'),
+                            14400 => __('4 hours', 'sardius-feed'),
+                            28800 => __('8 hours', 'sardius-feed'),
+                            86400 => __('24 hours', 'sardius-feed')
+                        );
+                        ?>
+                        <select id="sardius_feed_refresh_interval" name="sardius_feed_refresh_interval">
+                            <?php foreach ($intervals as $seconds => $label): ?>
+                                <option value="<?php echo esc_attr($seconds); ?>" <?php selected($refresh_interval, $seconds); ?>>
+                                    <?php echo esc_html($label); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <p class="description"><?php _e('How often should the feed be automatically refreshed in the background?', 'sardius-feed'); ?></p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row"><?php _e('Auto-Refresh Status', 'sardius-feed'); ?></th>
+                    <td>
+                        <?php 
+                        $last_auto_refresh = $plugin->get_last_auto_refresh_time();
+                        $next_scheduled = wp_next_scheduled('sardius_feed_auto_refresh');
+                        ?>
+                        <p>
+                            <strong><?php _e('Last Auto-Refresh:', 'sardius-feed'); ?></strong> 
+                            <?php if ($last_auto_refresh > 0): ?>
+                                <?php echo get_date_from_gmt(date('Y-m-d H:i:s', $last_auto_refresh), 'Y-m-d H:i:s'); ?>
+                                <small>(<?php echo wp_timezone_string(); ?>)</small>
+                            <?php else: ?>
+                                <em><?php _e('No auto-refresh has been performed yet.', 'sardius-feed'); ?></em>
+                            <?php endif; ?>
+                        </p>
+                        <p>
+                            <strong><?php _e('Next Scheduled Refresh:', 'sardius-feed'); ?></strong> 
+                            <?php if ($next_scheduled): ?>
+                                <?php echo get_date_from_gmt(date('Y-m-d H:i:s', $next_scheduled), 'Y-m-d H:i:s'); ?>
+                                <small>(<?php echo wp_timezone_string(); ?>)</small>
+                            <?php else: ?>
+                                <em><?php _e('Not scheduled.', 'sardius-feed'); ?></em>
+                            <?php endif; ?>
+                        </p>
+                        <p class="description"><?php _e('The feed will be automatically updated in the background using WordPress cron jobs.', 'sardius-feed'); ?></p>
+                    </td>
+                </tr>
+            </table>
+            <?php submit_button(__('Save Auto-Refresh Settings', 'sardius-feed')); ?>
+        </form>
+    </div>
+    
     <?php if (empty($account_id) || empty($feed_id)): ?>
         <div class="notice notice-warning">
             <p><?php _e('Please configure your API settings above before using the feed.', 'sardius-feed'); ?></p>
@@ -131,7 +198,7 @@ if ($feed_data) {
                 <?php _e('Categories', 'sardius-feed'); ?>
             </span>
             <span class="stat-item">
-                <strong><?php echo $plugin->format_date(get_option('sardius_feed_last_update', 0)); ?></strong>
+                <strong><?php echo $plugin->format_datetime(get_option('sardius_feed_last_update', 0)); ?></strong>
                 <?php _e('Last Updated', 'sardius-feed'); ?>
             </span>
         </div>
@@ -169,38 +236,34 @@ if ($feed_data) {
                             </div>
                         </div>
                         
-                        <div class="media-info">
-                            <h3 class="media-title">
-                                <a href="<?php echo $plugin->get_media_url($item); ?>" target="_blank">
-                                    <?php echo esc_html($item['title']); ?>
-                                </a>
-                            </h3>
+                                                 <div class="media-info">
+                             <h3 class="media-title">
+                                 <a href="<?php echo $plugin->get_media_url($item); ?>" target="_blank">
+                                     <?php echo esc_html($item['title']); ?>
+                                 </a>
+                             </h3>
+                             
+                             <div class="media-date">
+                                 <?php echo $plugin->format_date($item['airDate']); ?>
+                             </div>
+                             
+                             <?php 
+                             $series = $item['series'] ?? '';
+                             $bible_reference = !empty($item['metadata']['bibleReference']) ? implode(', ', $item['metadata']['bibleReference']) : '';
+                             
+                             if ($series) : ?>
+                                 <p><strong><?php _e('Series:', 'sardius-feed'); ?></strong> <?php echo esc_html($series); ?></p>
+                             <?php endif; 
+                             if ($bible_reference) : ?>
+                                 <p><strong><?php _e('Text:', 'sardius-feed'); ?></strong> <?php echo esc_html($bible_reference); ?></p>
+                             <?php endif; ?>
                             
-                            <div class="media-meta">
-                                <span class="media-date">
-                                    <?php echo $plugin->format_date($item['airDate']); ?>
-                                </span>
-                                
-                                <?php if (!empty($item['categories'])): ?>
-                                    <span class="media-categories">
-                                        <?php echo esc_html(implode(', ', $item['categories'])); ?>
-                                    </span>
-                                <?php endif; ?>
-                            </div>
-                            
-                            <div class="media-actions">
-                                <a href="<?php echo $plugin->get_media_url($item); ?>" 
-                                   class="button button-small" target="_blank">
-                                    <?php _e('View Page', 'sardius-feed'); ?>
-                                </a>
-                                
-                                <?php if (!empty($item['media']['url'])): ?>
-                                    <a href="<?php echo esc_url($item['media']['url']); ?>" 
-                                       class="button button-small" target="_blank">
-                                        <?php _e('Watch', 'sardius-feed'); ?>
-                                    </a>
-                                <?php endif; ?>
-                            </div>
+                                                         <div class="media-actions">
+                                 <a href="<?php echo $plugin->get_media_url($item); ?>" 
+                                    class="button button-small" target="_blank">
+                                     <?php _e('View Page', 'sardius-feed'); ?>
+                                 </a>
+                             </div>
                         </div>
                     </div>
                 <?php endforeach; ?>

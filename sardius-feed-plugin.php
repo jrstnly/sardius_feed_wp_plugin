@@ -47,6 +47,7 @@ class SardiusFeedPlugin {
         add_filter('archive_template', array($this, 'load_archive_template'));
         add_filter('pre_handle_404', array($this, 'prevent_archive_404'), 10, 2);
         add_action('updated_option', array($this, 'maybe_flush_on_slug_change'), 10, 3);
+        add_action('updated_option', array($this, 'maybe_reschedule_on_interval_change'), 10, 3);
         add_action('admin_init', array($this, 'ensure_rewrite_rules'));
         
         // Add settings
@@ -54,6 +55,10 @@ class SardiusFeedPlugin {
         
         // Add sitemap generation
         add_action('init', array($this, 'add_sitemap_endpoint'));
+        
+        // Add auto-refresh cron job
+        add_action('sardius_feed_auto_refresh', array($this, 'auto_refresh_feed'));
+        add_action('init', array($this, 'schedule_auto_refresh'));
         
         // Include shortcodes
         require_once SARDIUS_FEED_PLUGIN_PATH . 'includes/shortcodes.php';
@@ -72,9 +77,14 @@ class SardiusFeedPlugin {
         // Create necessary database tables or options
         add_option('sardius_feed_last_update', 0);
         add_option('sardius_feed_cache', '');
+        add_option('sardius_feed_last_auto_refresh', 0);
+        add_option('sardius_feed_refresh_interval', 3600); // Default: 1 hour
         if (get_option('sardius_media_slug', null) === null) {
             add_option('sardius_media_slug', 'sardius-media');
         }
+        
+        // Schedule the auto-refresh cron job
+        $this->schedule_auto_refresh();
         
         // Ensure our rewrite rules are registered before flushing
         $this->add_rewrite_rules();
@@ -82,6 +92,9 @@ class SardiusFeedPlugin {
     }
     
     public function deactivate() {
+        // Clear the scheduled cron job
+        wp_clear_scheduled_hook('sardius_feed_auto_refresh');
+        
         // Clean up if necessary
         flush_rewrite_rules();
     }
@@ -161,6 +174,7 @@ class SardiusFeedPlugin {
         register_setting('sardius_feed_settings', 'sardius_media_slug');
         register_setting('sardius_feed_settings', 'sardius_elementor_template_id');
         register_setting('sardius_feed_settings', 'sardius_archive_elementor_template_id');
+        register_setting('sardius_feed_settings', 'sardius_feed_refresh_interval');
         
         add_settings_section(
             'sardius_feed_api_settings',
@@ -184,6 +198,21 @@ class SardiusFeedPlugin {
             'sardius-feed',
             'sardius_feed_api_settings'
         );
+        
+        add_settings_section(
+            'sardius_feed_auto_refresh_settings',
+            __('Auto-Refresh Settings', 'sardius-feed'),
+            array($this, 'auto_refresh_section_callback'),
+            'sardius-feed'
+        );
+        
+        add_settings_field(
+            'sardius_feed_refresh_interval',
+            __('Refresh Interval', 'sardius-feed'),
+            array($this, 'refresh_interval_field_callback'),
+            'sardius-feed',
+            'sardius_feed_auto_refresh_settings'
+        );
     }
     
     public function settings_section_callback() {
@@ -200,6 +229,43 @@ class SardiusFeedPlugin {
         $value = get_option('sardius_feed_id', '');
         echo '<input type="text" id="sardius_feed_id" name="sardius_feed_id" value="' . esc_attr($value) . '" class="regular-text" />';
         echo '<p class="description">' . __('Enter your Sardius Media Feed ID.', 'sardius-feed') . '</p>';
+    }
+    
+    public function auto_refresh_section_callback() {
+        echo '<p>' . __('Configure automatic feed refresh settings. The feed will be automatically updated in the background.', 'sardius-feed') . '</p>';
+        
+        $last_refresh = $this->get_last_auto_refresh_time();
+        if ($last_refresh > 0) {
+            echo '<p><strong>' . __('Last Auto-Refresh:', 'sardius-feed') . '</strong> ' . get_date_from_gmt(date('Y-m-d H:i:s', $last_refresh), 'Y-m-d H:i:s') . ' (' . wp_timezone_string() . ')</p>';
+        } else {
+            echo '<p><em>' . __('No auto-refresh has been performed yet.', 'sardius-feed') . '</em></p>';
+        }
+        
+        $next_scheduled = wp_next_scheduled('sardius_feed_auto_refresh');
+        if ($next_scheduled) {
+            echo '<p><strong>' . __('Next Scheduled Refresh:', 'sardius-feed') . '</strong> ' . get_date_from_gmt(date('Y-m-d H:i:s', $next_scheduled), 'Y-m-d H:i:s') . ' (' . wp_timezone_string() . ')</p>';
+        }
+    }
+    
+    public function refresh_interval_field_callback() {
+        $value = get_option('sardius_feed_refresh_interval', 3600);
+        $intervals = array(
+            900 => __('15 minutes', 'sardius-feed'),
+            1800 => __('30 minutes', 'sardius-feed'),
+            3600 => __('1 hour', 'sardius-feed'),
+            7200 => __('2 hours', 'sardius-feed'),
+            14400 => __('4 hours', 'sardius-feed'),
+            28800 => __('8 hours', 'sardius-feed'),
+            86400 => __('24 hours', 'sardius-feed')
+        );
+        
+        echo '<select id="sardius_feed_refresh_interval" name="sardius_feed_refresh_interval">';
+        foreach ($intervals as $seconds => $label) {
+            $selected = ($value == $seconds) ? 'selected' : '';
+            echo '<option value="' . esc_attr($seconds) . '" ' . $selected . '>' . esc_html($label) . '</option>';
+        }
+        echo '</select>';
+        echo '<p class="description">' . __('How often should the feed be automatically refreshed?', 'sardius-feed') . '</p>';
     }
     
     public function get_feed_data() {
@@ -561,6 +627,12 @@ class SardiusFeedPlugin {
             flush_rewrite_rules();
         }
     }
+    
+    public function maybe_reschedule_on_interval_change($option, $old_value, $value) {
+        if ($option === 'sardius_feed_refresh_interval' && $old_value !== $value) {
+            $this->schedule_auto_refresh();
+        }
+    }
 
     public function ensure_rewrite_rules() {
         // Flush once per version and slug combo to avoid 404 on archive route
@@ -582,6 +654,10 @@ class SardiusFeedPlugin {
     
     public function format_date($date_string) {
         return date_i18n(get_option('date_format'), strtotime($date_string));
+    }
+    
+    public function format_datetime($timestamp) {
+        return date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $timestamp);
     }
     
     private function add_seo_meta_tags($media_item) {
@@ -814,6 +890,102 @@ class SardiusFeedPlugin {
         $xml .= '</urlset>';
         
         return $xml;
+    }
+    
+    /**
+     * Schedule the auto-refresh cron job
+     */
+    public function schedule_auto_refresh() {
+        // Clear any existing schedule first
+        wp_clear_scheduled_hook('sardius_feed_auto_refresh');
+        
+        // Get the refresh interval
+        $refresh_interval = get_option('sardius_feed_refresh_interval', 3600); // Default: 1 hour
+        
+        // Map intervals to WordPress cron schedules
+        $schedule_map = array(
+            900 => 'fifteen_minutes',
+            1800 => 'thirty_minutes', 
+            3600 => 'hourly',
+            7200 => 'two_hours',
+            14400 => 'four_hours',
+            28800 => 'eight_hours',
+            86400 => 'daily'
+        );
+        
+        $schedule = isset($schedule_map[$refresh_interval]) ? $schedule_map[$refresh_interval] : 'hourly';
+        
+        // Add custom cron schedules if needed
+        add_filter('cron_schedules', array($this, 'add_custom_cron_schedules'));
+        
+        // Schedule the event
+        wp_schedule_event(time(), $schedule, 'sardius_feed_auto_refresh');
+    }
+    
+    /**
+     * Add custom cron schedules
+     */
+    public function add_custom_cron_schedules($schedules) {
+        $schedules['fifteen_minutes'] = array(
+            'interval' => 900,
+            'display' => __('Every 15 Minutes', 'sardius-feed')
+        );
+        $schedules['thirty_minutes'] = array(
+            'interval' => 1800,
+            'display' => __('Every 30 Minutes', 'sardius-feed')
+        );
+        $schedules['two_hours'] = array(
+            'interval' => 7200,
+            'display' => __('Every 2 Hours', 'sardius-feed')
+        );
+        $schedules['four_hours'] = array(
+            'interval' => 14400,
+            'display' => __('Every 4 Hours', 'sardius-feed')
+        );
+        $schedules['eight_hours'] = array(
+            'interval' => 28800,
+            'display' => __('Every 8 Hours', 'sardius-feed')
+        );
+        return $schedules;
+    }
+    
+    /**
+     * Auto-refresh the feed data via cron job
+     */
+    public function auto_refresh_feed() {
+        // Clear the cached data to force a fresh fetch
+        $this->feed_data = null;
+        
+        // Fetch fresh data
+        $new_data = $this->fetch_feed_data();
+        
+        if ($new_data) {
+            // Update cache with new data
+            update_option('sardius_feed_cache', json_encode($new_data));
+            update_option('sardius_feed_last_update', time());
+            update_option('sardius_feed_last_auto_refresh', time());
+            
+            // Log successful refresh
+            error_log('Sardius Feed Plugin: Auto-refresh completed successfully at ' . date('Y-m-d H:i:s'));
+        } else {
+            // Log failed refresh
+            error_log('Sardius Feed Plugin: Auto-refresh failed at ' . date('Y-m-d H:i:s'));
+        }
+    }
+    
+    /**
+     * Get the last auto-refresh time
+     */
+    public function get_last_auto_refresh_time() {
+        return get_option('sardius_feed_last_auto_refresh', 0);
+    }
+    
+    /**
+     * Manually trigger a feed refresh
+     */
+    public function manual_refresh_feed() {
+        $this->auto_refresh_feed();
+        return $this->get_feed_data();
     }
 }
 
