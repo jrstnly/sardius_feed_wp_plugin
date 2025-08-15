@@ -374,4 +374,52 @@
     background: #d1ecf1;
     border-color: #17a2b8;
     color: #0c5460;
+}
+
+/* Pagination Styles */
+.sardius-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-top: 1px solid #ddd;
+}
+
+.sardius-pagination .button {
+    padding: 8px 12px;
+    text-decoration: none;
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #333;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.sardius-pagination .button:hover {
+    background: #0073aa;
+    color: #fff;
+    border-color: #0073aa;
+    text-decoration: none;
+}
+
+.sardius-pagination .current-page {
+    padding: 8px 12px;
+    background: #0073aa;
+    color: #fff;
+    border: 1px solid #0073aa;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.sardius-pagination .button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.sardius-pagination .button:disabled:hover {
+    background: #fff;
+    color: #333;
+    border-color: #ddd;
 } 

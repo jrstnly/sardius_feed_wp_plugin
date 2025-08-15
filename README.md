@@ -4,16 +4,17 @@ A WordPress plugin that pulls media from the Sardius content feed and creates vi
 
 ## Features
 
-- **Automatic Feed Integration**: Pulls media data from the Sardius API feed
+- **Smart Feed Integration**: Pulls media data from the Sardius API feed with pagination support
 - **Virtual Pages**: Creates individual pages for each media item with custom URLs
 - **Advanced Filtering**: Filter media by category, search terms, and sort by date
-- **Admin Management**: Complete admin interface for managing and viewing media
-- **Caching System**: Intelligent caching to improve performance
+- **Admin Management**: Complete admin interface for managing and viewing media with pagination
+- **Intelligent Caching**: 1-hour cache with automatic refresh on user visits
 - **Responsive Design**: Mobile-friendly interface
 - **Video Player**: Built-in video player with keyboard shortcuts
 - **Download Support**: Direct download links for media files
 - **SEO Optimized**: SEO-friendly URLs, meta tags, and structured data
 - **Sitemap Generation**: Automatic XML sitemap at `/sardius-sitemap.xml`
+- **Pagination Support**: Handles large datasets with configurable pagination settings
 
 ## Installation
 
@@ -56,6 +57,8 @@ A WordPress plugin that pulls media from the Sardius content feed and creates vi
    - Each media item shows thumbnail, title, date, duration, and categories
    - Click **View Page** to see the virtual page
    - Click **Watch** to view the video directly
+   - Navigate through pages using the pagination controls at the bottom
+   - Configure items per page in the Pagination Settings section
 
 ### Frontend Search Interface
 
@@ -141,6 +144,26 @@ $api_url = 'https://api.sardius.media/feeds/' . $account_id . '/' . $feed_id . '
 ```
 
 You can configure these values in the admin interface under **Sardius Feed** > **API Configuration**.
+
+### Pagination Settings
+
+The plugin now supports pagination for handling large datasets:
+
+1. **Maximum Items to Keep**: Configure how many media items to fetch and store from the API (default: 1000)
+2. **Admin Items Per Page**: Set how many items to display per page in the admin interface (default: 25)
+
+These settings can be configured in the admin interface under **Sardius Feed** > **Pagination Settings**.
+
+**Note**: The Sardius API returns 25 items per page by default. The plugin automatically fetches all available pages to build a complete dataset, then applies your configured limits.
+
+### Caching Behavior
+
+The plugin uses intelligent caching to improve performance:
+
+- **Cache Duration**: Data is cached for 1 hour by default
+- **Automatic Refresh**: When the cache expires, fresh data is automatically fetched on the next user visit
+- **Manual Refresh**: Use the "Refresh Feed" button in the admin interface to manually update the cache
+- **No Background Jobs**: The plugin doesn't use WordPress cron jobs, making it simpler and more reliable
 
 ## SEO Features
 
@@ -285,6 +308,17 @@ The plugin is built with extensibility in mind. You can:
 For support and feature requests, please contact the plugin developer.
 
 ## Changelog
+
+### Version 1.1.0
+- Added pagination support for large datasets
+- Implemented recursive API fetching to handle all available pages
+- Added configurable maximum items limit (default: 1000)
+- Added admin pagination with configurable items per page (default: 25)
+- Added pagination controls to admin interface
+- Improved performance for large media libraries
+- Added pagination settings section to admin interface
+- Removed automatic refresh functionality for simpler, more reliable operation
+- Data now refreshes automatically on user visits when cache expires (1 hour)
 
 ### Version 1.0.0
 - Initial release

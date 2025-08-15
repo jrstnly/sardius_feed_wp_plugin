@@ -7,6 +7,11 @@ $plugin = new SardiusFeedPlugin();
 $feed_data = $plugin->get_feed_data();
 $total_items = $feed_data ? count($feed_data['hits']) : 0;
 
+// Get pagination parameters
+$current_page = isset($_GET['paged']) ? max(1, intval($_GET['paged'])) : 1;
+$items_per_page = intval(get_option('sardius_admin_items_per_page', 25));
+$paginated_data = $plugin->get_paginated_feed_data($current_page, $items_per_page);
+
 // Get unique categories
 $categories = array();
 if ($feed_data) {
@@ -45,8 +50,12 @@ if ($feed_data) {
         if (isset($_POST['sardius_archive_elementor_template_id'])) {
             update_option('sardius_archive_elementor_template_id', intval($_POST['sardius_archive_elementor_template_id']));
         }
-        if (isset($_POST['sardius_feed_refresh_interval'])) {
-            update_option('sardius_feed_refresh_interval', intval($_POST['sardius_feed_refresh_interval']));
+
+        if (isset($_POST['sardius_max_items'])) {
+            update_option('sardius_max_items', intval($_POST['sardius_max_items']));
+        }
+        if (isset($_POST['sardius_admin_items_per_page'])) {
+            update_option('sardius_admin_items_per_page', intval($_POST['sardius_admin_items_per_page']));
         }
         echo '<div class="notice notice-success"><p>' . __('Settings saved successfully!', 'sardius-feed') . '</p></div>';
     }
@@ -117,67 +126,49 @@ if ($feed_data) {
         </form>
     </div>
     
+
+    
     <div class="sardius-feed-settings">
-        <h2><?php _e('Auto-Refresh Configuration', 'sardius-feed'); ?></h2>
+        <h2><?php _e('Pagination Settings', 'sardius-feed'); ?></h2>
         <form method="post" action="">
             <table class="form-table">
                 <tr>
                     <th scope="row">
-                        <label for="sardius_feed_refresh_interval"><?php _e('Refresh Interval', 'sardius-feed'); ?></label>
+                        <label for="sardius_max_items"><?php _e('Maximum Items to Keep', 'sardius-feed'); ?></label>
+                    </th>
+                    <td>
+                        <input type="number" id="sardius_max_items" name="sardius_max_items" 
+                               value="<?php echo esc_attr(get_option('sardius_max_items', 1000)); ?>" 
+                               class="small-text" min="100" max="10000" />
+                        <p class="description"><?php _e('Maximum number of media items to fetch and keep from the API. Higher values may impact performance.', 'sardius-feed'); ?></p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="sardius_admin_items_per_page"><?php _e('Admin Items Per Page', 'sardius-feed'); ?></label>
                     </th>
                     <td>
                         <?php 
-                        $refresh_interval = get_option('sardius_feed_refresh_interval', 3600);
-                        $intervals = array(
-                            900 => __('15 minutes', 'sardius-feed'),
-                            1800 => __('30 minutes', 'sardius-feed'),
-                            3600 => __('1 hour', 'sardius-feed'),
-                            7200 => __('2 hours', 'sardius-feed'),
-                            14400 => __('4 hours', 'sardius-feed'),
-                            28800 => __('8 hours', 'sardius-feed'),
-                            86400 => __('24 hours', 'sardius-feed')
+                        $admin_items_per_page = get_option('sardius_admin_items_per_page', 25);
+                        $options = array(
+                            10 => __('10 items', 'sardius-feed'),
+                            25 => __('25 items', 'sardius-feed'),
+                            50 => __('50 items', 'sardius-feed'),
+                            100 => __('100 items', 'sardius-feed')
                         );
                         ?>
-                        <select id="sardius_feed_refresh_interval" name="sardius_feed_refresh_interval">
-                            <?php foreach ($intervals as $seconds => $label): ?>
-                                <option value="<?php echo esc_attr($seconds); ?>" <?php selected($refresh_interval, $seconds); ?>>
+                        <select id="sardius_admin_items_per_page" name="sardius_admin_items_per_page">
+                            <?php foreach ($options as $count => $label): ?>
+                                <option value="<?php echo esc_attr($count); ?>" <?php selected($admin_items_per_page, $count); ?>>
                                     <?php echo esc_html($label); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <p class="description"><?php _e('How often should the feed be automatically refreshed in the background?', 'sardius-feed'); ?></p>
-                    </td>
-                </tr>
-                <tr>
-                    <th scope="row"><?php _e('Auto-Refresh Status', 'sardius-feed'); ?></th>
-                    <td>
-                        <?php 
-                        $last_auto_refresh = $plugin->get_last_auto_refresh_time();
-                        $next_scheduled = wp_next_scheduled('sardius_feed_auto_refresh');
-                        ?>
-                        <p>
-                            <strong><?php _e('Last Auto-Refresh:', 'sardius-feed'); ?></strong> 
-                            <?php if ($last_auto_refresh > 0): ?>
-                                <?php echo get_date_from_gmt(date('Y-m-d H:i:s', $last_auto_refresh), 'Y-m-d H:i:s'); ?>
-                                <small>(<?php echo wp_timezone_string(); ?>)</small>
-                            <?php else: ?>
-                                <em><?php _e('No auto-refresh has been performed yet.', 'sardius-feed'); ?></em>
-                            <?php endif; ?>
-                        </p>
-                        <p>
-                            <strong><?php _e('Next Scheduled Refresh:', 'sardius-feed'); ?></strong> 
-                            <?php if ($next_scheduled): ?>
-                                <?php echo get_date_from_gmt(date('Y-m-d H:i:s', $next_scheduled), 'Y-m-d H:i:s'); ?>
-                                <small>(<?php echo wp_timezone_string(); ?>)</small>
-                            <?php else: ?>
-                                <em><?php _e('Not scheduled.', 'sardius-feed'); ?></em>
-                            <?php endif; ?>
-                        </p>
-                        <p class="description"><?php _e('The feed will be automatically updated in the background using WordPress cron jobs.', 'sardius-feed'); ?></p>
+                        <p class="description"><?php _e('Number of items to display per page in the admin interface.', 'sardius-feed'); ?></p>
                     </td>
                 </tr>
             </table>
-            <?php submit_button(__('Save Auto-Refresh Settings', 'sardius-feed')); ?>
+            <?php submit_button(__('Save Pagination Settings', 'sardius-feed')); ?>
         </form>
     </div>
     
@@ -213,12 +204,17 @@ if ($feed_data) {
     
     <div class="sardius-feed-results">
         <div id="results-count" class="results-count">
-            <?php printf(__('Showing %d items', 'sardius-feed'), $total_items); ?>
+            <?php printf(__('Showing %d of %d items (Page %d of %d)', 'sardius-feed'), 
+                count($paginated_data['items']), 
+                $paginated_data['total'], 
+                $paginated_data['current_page'], 
+                $paginated_data['total_pages']
+            ); ?>
         </div>
         
         <div id="media-grid" class="media-grid">
-            <?php if ($feed_data): ?>
-                <?php foreach ($feed_data['hits'] as $item): ?>
+            <?php if ($paginated_data['items']): ?>
+                <?php foreach ($paginated_data['items'] as $item): ?>
                     <div class="media-item" data-id="<?php echo esc_attr($item['id']); ?>">
                         <div class="media-thumbnail">
                             <?php if (!empty($item['files']) && !empty($item['files'][0]['url'])): ?>
@@ -273,6 +269,40 @@ if ($feed_data) {
                 </div>
             <?php endif; ?>
         </div>
+        
+        <?php if ($paginated_data['total_pages'] > 1): ?>
+            <div class="sardius-pagination">
+                <?php
+                $current_url = add_query_arg(array(), remove_query_arg('paged'));
+                
+                // Previous page
+                if ($paginated_data['current_page'] > 1): ?>
+                    <a href="<?php echo esc_url(add_query_arg('paged', $paginated_data['current_page'] - 1, $current_url)); ?>" 
+                       class="button">&laquo; <?php _e('Previous', 'sardius-feed'); ?></a>
+                <?php endif; ?>
+                
+                <?php
+                // Page numbers
+                $start_page = max(1, $paginated_data['current_page'] - 2);
+                $end_page = min($paginated_data['total_pages'], $paginated_data['current_page'] + 2);
+                
+                for ($i = $start_page; $i <= $end_page; $i++): ?>
+                    <?php if ($i == $paginated_data['current_page']): ?>
+                        <span class="current-page"><?php echo $i; ?></span>
+                    <?php else: ?>
+                        <a href="<?php echo esc_url(add_query_arg('paged', $i, $current_url)); ?>" 
+                           class="button"><?php echo $i; ?></a>
+                    <?php endif; ?>
+                <?php endfor; ?>
+                
+                <?php
+                // Next page
+                if ($paginated_data['current_page'] < $paginated_data['total_pages']): ?>
+                    <a href="<?php echo esc_url(add_query_arg('paged', $paginated_data['current_page'] + 1, $current_url)); ?>" 
+                       class="button"><?php _e('Next', 'sardius-feed'); ?> &raquo;</a>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
     </div>
     <?php endif; ?>
 </div>
