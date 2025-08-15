@@ -89,6 +89,12 @@ class SardiusFeedPlugin {
     public function enqueue_scripts() {
         wp_enqueue_style('typekit-fonts', 'https://use.typekit.net/lkd1tkd.css', array(), null);
         wp_enqueue_style('sardius-feed-frontend', SARDIUS_FEED_PLUGIN_URL . 'assets/css/frontend.css', array(), SARDIUS_FEED_VERSION);
+        wp_enqueue_style('sardius-feed-single-media-content', SARDIUS_FEED_PLUGIN_URL . 'assets/css/single-media-content.css', array(), SARDIUS_FEED_VERSION);
+        wp_enqueue_style('sardius-feed-shortcode-media', SARDIUS_FEED_PLUGIN_URL . 'assets/css/shortcode-media.css', array(), SARDIUS_FEED_VERSION);
+        wp_enqueue_style('sardius-feed-shortcode-media-list', SARDIUS_FEED_PLUGIN_URL . 'assets/css/shortcode-media-list.css', array(), SARDIUS_FEED_VERSION);
+        wp_enqueue_style('sardius-feed-shortcode-media-player', SARDIUS_FEED_PLUGIN_URL . 'assets/css/shortcode-media-player.css', array(), SARDIUS_FEED_VERSION);
+        wp_enqueue_style('sardius-feed-shortcode-media-search', SARDIUS_FEED_PLUGIN_URL . 'assets/css/shortcode-media-search.css', array(), SARDIUS_FEED_VERSION);
+        wp_enqueue_style('sardius-feed-shortcode-media-archive', SARDIUS_FEED_PLUGIN_URL . 'assets/css/shortcode-media-archive.css', array(), SARDIUS_FEED_VERSION);
         wp_enqueue_script('sardius-feed-frontend', SARDIUS_FEED_PLUGIN_URL . 'assets/js/frontend.js', array('jquery'), SARDIUS_FEED_VERSION, true);
         wp_localize_script('sardius-feed-frontend', 'sardius_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
@@ -96,7 +102,8 @@ class SardiusFeedPlugin {
         ));
 
         // Ensure Elementor frontend assets (and its localized config) are loaded on virtual media pages
-        if ($this->is_media_request() && class_exists('Elementor\\Plugin')) {
+        $archive_template_id = intval(get_option('sardius_archive_elementor_template_id', 0));
+        if (($this->is_media_request() || ($this->is_media_archive_request() && $archive_template_id > 0)) && class_exists('Elementor\\Plugin')) {
             $elementor = \Elementor\Plugin::instance();
             // Core Elementor assets
             $elementor->frontend->enqueue_styles();
@@ -107,8 +114,13 @@ class SardiusFeedPlugin {
             }
             // If a specific Saved Template is selected, enqueue its CSS file
             $template_id = intval(get_option('sardius_elementor_template_id', 0));
-            if ($template_id > 0 && class_exists('Elementor\\Core\\Files\\CSS\\Post')) {
-                try { \Elementor\Core\Files\CSS\Post::create($template_id)->enqueue(); } catch (\Throwable $e) {}
+            if (class_exists('Elementor\\Core\\Files\\CSS\\Post')) {
+                if ($template_id > 0) {
+                    try { \Elementor\Core\Files\CSS\Post::create($template_id)->enqueue(); } catch (\Throwable $e) {}
+                }
+                if ($archive_template_id > 0) {
+                    try { \Elementor\Core\Files\CSS\Post::create($archive_template_id)->enqueue(); } catch (\Throwable $e) {}
+                }
             }
         }
     }
@@ -518,17 +530,16 @@ class SardiusFeedPlugin {
     public function load_archive_template($template) {
         if (is_post_type_archive('sardius_media')) {
             $archive_template_id = intval(get_option('sardius_archive_elementor_template_id', 0));
-            if ($archive_template_id > 0) {
-                $elementor_archive = SARDIUS_FEED_PLUGIN_PATH . 'templates/archive-elementor.php';
-                if (file_exists($elementor_archive)) {
-                    return $elementor_archive;
-                }
-            } else {
-                $plugin_template = SARDIUS_FEED_PLUGIN_PATH . 'templates/archive-sardius_media.php';
-                if (file_exists($plugin_template)) {
-                    return $plugin_template;
+            if ($archive_template_id > 0 && function_exists('do_shortcode')) {
+                // Return a simple template that just outputs the Elementor template
+                // This lets the theme handle header/footer and Elementor initialization
+                $elementor_template = SARDIUS_FEED_PLUGIN_PATH . 'templates/archive-elementor-simple.php';
+                if (file_exists($elementor_template)) {
+                    return $elementor_template;
                 }
             }
+            // Don't override theme template - let theme handle page structure
+            // Plugin content will be injected via shortcode
         }
         return $template;
     }
@@ -761,160 +772,17 @@ class SardiusFeedPlugin {
 
     // Archive shortcode for Elementor archive template
     public function shortcode_media_archive() {
-        $feed_data = $this->get_feed_data();
-        $items = $feed_data['hits'] ?? array();
-        
-        // Get all unique series for the filter dropdown
-        $all_series = [];
-        if (!empty($items)) {
-            foreach ($items as $item) {
-                if (!empty($item['series']) && !in_array($item['series'], $all_series)) {
-                    $all_series[] = $item['series'];
-                }
-            }
-            sort($all_series);
-        }
-        
         ob_start();
-        ?>
-        <div class="sardius-media-archive-container">
-            <aside id="sardius-filters">
-                <div class="filter-group">
-                    <h3><?php _e('WATCH GRACE LIVE:', 'sardius-feed'); ?></h3>
-                    <p>SUNDAYS 9:00A & 10:40A CT</p>
-                    <a href="#" class="watch-now-button"><?php _e('WATCH NOW', 'sardius-feed'); ?></a>
-                </div>
-
-                <div class="filter-group">
-                    <h3><?php _e('SEARCH:', 'sardius-feed'); ?></h3>
-                    <div class="search-container">
-                        <input type="text" id="sardius-search" placeholder="<?php _e('All Messages...', 'sardius-feed'); ?>">
-                        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" fill="currentColor"/>
-                        </svg>
-                    </div>
-                </div>
-
-                <div class="filter-group">
-                    <h3><?php _e('SERIES:', 'sardius-feed'); ?></h3>
-                    <div class="autocomplete-container">
-                        <input type="text" id="sardius-series-filter" placeholder="<?php _e('Select Series', 'sardius-feed'); ?>" autocomplete="off">
-                        <div class="autocomplete-dropdown" id="series-dropdown" style="display: none;">
-                            <?php foreach ($all_series as $series) : ?>
-                                <div class="autocomplete-item" data-value="<?php echo esc_attr($series); ?>"><?php echo esc_html($series); ?></div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="filter-group">
-                    <h3><?php _e('DATE RANGE:', 'sardius-feed'); ?></h3>
-                    <div class="date-range-fields">
-                        <input type="date" id="sardius-date-from" placeholder="From">
-                        <span>To</span>
-                        <input type="date" id="sardius-date-to" placeholder="To">
-                    </div>
-                </div>
-
-                <div class="filter-group" id="reset-filters-group" style="display: none;">
-                    <button id="reset-filters" class="reset-filters-button">
-                        <?php _e('Reset Filters', 'sardius-feed'); ?>
-                    </button>
-                </div>
-            </aside>
-
-            <div id="sardius-media-grid">
-                <?php if (!empty($items)) : ?>
-                    <?php foreach ($items as $item) : ?>
-                        <div class="sardius-media-item" data-id="<?php echo esc_attr($item['pid']); ?>">
-                            <div class="video-player-container">
-                                <?php 
-                                $thumbnail_url = !empty($item['files'][0]['url']) ? $item['files'][0]['url'] : '';
-                                $duration = $this->format_duration($item['duration'] ?? 0);
-                                $media_url = $this->get_media_url($item);
-                                
-                                if ($thumbnail_url) : ?>
-                                    <img src="<?php echo esc_url($thumbnail_url); ?>" alt="<?php echo esc_attr($item['title']); ?>" class="video-thumbnail" onclick="window.location.href='<?php echo esc_url($media_url); ?>'">
-                                <?php else : ?>
-                                    <div class="video-thumbnail" style="background-color: #333; display: flex; align-items: center; justify-content: center; color: white;" onclick="window.location.href='<?php echo esc_url($media_url); ?>'">
-                                        <span style="font-size: 48px;">▶</span>
-                                    </div>
-                                <?php endif; ?>
-                                <div class="video-duration"><?php echo esc_html($duration); ?></div>
-                            </div>
-                            <div class="sardius-media-item-info">
-                                <h3><a href="<?php echo esc_url($media_url); ?>"><?php echo esc_html($item['title']); ?></a></h3>
-                                <div class="media-date"><?php echo esc_html($this->format_date($item['airDate'])); ?></div>
-                                <?php 
-                                $series = $item['series'] ?? '';
-                                $bible_reference = !empty($item['metadata']['bibleReference']) ? implode(', ', $item['metadata']['bibleReference']) : '';
-                                
-                                if ($series) : ?>
-                                    <p><strong><?php _e('Series:', 'sardius-feed'); ?></strong> <?php echo esc_html($series); ?></p>
-                                <?php endif; 
-                                if ($bible_reference) : ?>
-                                    <p><strong><?php _e('Text:', 'sardius-feed'); ?></strong> <?php echo esc_html($bible_reference); ?></p>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                <?php else : ?>
-                    <p><?php _e('No media items found.', 'sardius-feed'); ?></p>
-                <?php endif; ?>
-            </div>
-        </div>
-        <?php
+        $plugin = $this;
+        include SARDIUS_FEED_PLUGIN_PATH . 'templates/shortcode-media-archive.php';
         return ob_get_clean();
     }
 
     private function build_default_media_content_html(array $media_item) {
-        $title = esc_html($media_item['title'] ?? '');
-        $airDate = esc_html($this->format_date($media_item['airDate'] ?? ''));
-        $duration = esc_html($this->format_duration($media_item['duration'] ?? 0));
-        $categories = !empty($media_item['categories']) ? '<span class="media-categories">' . esc_html(implode(', ', (array)$media_item['categories'])) . '</span>' : '';
-        $descriptionText = $media_item['searchText'] ?? '';
-        $description = $descriptionText ? ('<div class="media-description"><h3>' . esc_html__('Description', 'sardius-feed') . '</h3><p>' . esc_html($descriptionText) . '</p></div>') : '';
-        $video = $this->build_video_player_html($media_item);
-
-        $style = '
-        <style>
-            .sardius-media-single .media-player {
-                background: #000;
-            }
-            .sardius-media-single .media-header {
-                background-color: #f7f7f7;
-                padding: 1.5rem;
-                border: 1px solid #e0e0e0;
-                border-top: 0;
-            }
-            .sardius-media-single .media-title {
-                font-size: 1.8rem;
-                font-weight: 600;
-                margin-top: 0;
-                margin-bottom: 0.5rem;
-            }
-            .sardius-media-single .media-meta {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 1rem;
-                font-size: 0.9rem;
-                color: #555;
-            }
-            .sardius-media-single .media-description {
-                padding: 1.5rem;
-                border: 1px solid #e0e0e0;
-                border-top: 0;
-            }
-        </style>
-        ';
-
-        return $style . '<div class="sardius-media-single"><div class="container">'
-            . '<div class="media-content"><div class="media-player">' . $video . '</div>'
-            . '<div class="media-header"><h1 class="media-title">' . $title . '</h1>'
-            . '<div class="media-meta"><span class="media-date"><strong>' . esc_html__('Air Date:', 'sardius-feed') . '</strong> ' . $airDate . '</span>'
-            . '<span class="media-duration"><strong>' . esc_html__('Duration:', 'sardius-feed') . '</strong> ' . $duration . '</span>'
-            . $categories . '</div></div>'
-            . $description . '</div></div></div>';
+        ob_start();
+        $plugin = $this;
+        include SARDIUS_FEED_PLUGIN_PATH . 'templates/single-media-content.php';
+        return ob_get_clean();
     }
     
     public function add_sitemap_endpoint() {
