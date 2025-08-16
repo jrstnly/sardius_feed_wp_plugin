@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Sardius Feed Plugin
  * Plugin URI: https://sardius.media
- * Description: Pulls media from Sardius feed and creates virtual pages with filtering capabilities
+ * Description: Pulls media from Sardius feed and creates virtual pages with shortcode support for flexible content display
  * Version: 1.0.0
  * Author: JR Stanley
  * License: GPL v2 or later
@@ -47,8 +47,6 @@ class SardiusFeedPlugin {
         add_shortcode('sardius_media_content', array($this, 'shortcode_media_content'));
         add_shortcode('sardius_media_archive', array($this, 'shortcode_media_archive'));
         add_filter('body_class', array($this, 'filter_body_class'));
-        add_filter('archive_template', array($this, 'load_archive_template'));
-        add_filter('pre_handle_404', array($this, 'prevent_archive_404'), 10, 2);
         add_action('updated_option', array($this, 'maybe_flush_on_slug_change'), 10, 3);
         add_action('admin_init', array($this, 'ensure_rewrite_rules'));
         
@@ -114,8 +112,7 @@ class SardiusFeedPlugin {
         ));
 
         // Ensure Elementor frontend assets (and its localized config) are loaded on virtual media pages
-        $archive_template_id = intval(get_option('sardius_archive_elementor_template_id', 0));
-        if (($this->is_media_request() || ($this->is_media_archive_request() && $archive_template_id > 0)) && class_exists('Elementor\\Plugin')) {
+        if ($this->is_media_request() && class_exists('Elementor\\Plugin')) {
             $elementor = \Elementor\Plugin::instance();
             // Core Elementor assets
             $elementor->frontend->enqueue_styles();
@@ -129,9 +126,6 @@ class SardiusFeedPlugin {
             if (class_exists('Elementor\\Core\\Files\\CSS\\Post')) {
                 if ($template_id > 0) {
                     try { \Elementor\Core\Files\CSS\Post::create($template_id)->enqueue(); } catch (\Throwable $e) {}
-                }
-                if ($archive_template_id > 0) {
-                    try { \Elementor\Core\Files\CSS\Post::create($archive_template_id)->enqueue(); } catch (\Throwable $e) {}
                 }
             }
         }
@@ -172,7 +166,6 @@ class SardiusFeedPlugin {
         register_setting('sardius_feed_settings', 'sardius_feed_id');
         register_setting('sardius_feed_settings', 'sardius_media_slug');
         register_setting('sardius_feed_settings', 'sardius_elementor_template_id');
-        register_setting('sardius_feed_settings', 'sardius_archive_elementor_template_id');
         register_setting('sardius_feed_settings', 'sardius_max_items');
         register_setting('sardius_feed_settings', 'sardius_admin_items_per_page');
         register_setting('sardius_feed_settings', 'sardius_frontend_items_per_page');
@@ -296,8 +289,10 @@ class SardiusFeedPlugin {
             echo '<option value="' . esc_attr($count) . '" ' . $selected . '>' . esc_html($label) . '</option>';
         }
         echo '</select>';
-        echo '<p class="description">' . __('Number of items to display per page on the frontend archive page.', 'sardius-feed') . '</p>';
+        echo '<p class="description">' . __('Number of items to display per page in shortcodes.', 'sardius-feed') . '</p>';
     }
+    
+
     
     public function get_feed_data() {
         if ($this->feed_data === null) {
@@ -804,33 +799,7 @@ class SardiusFeedPlugin {
         return strtolower($clean);
     }
 
-    public function load_archive_template($template) {
-        if (is_post_type_archive('sardius_media')) {
-            $archive_template_id = intval(get_option('sardius_archive_elementor_template_id', 0));
-            if ($archive_template_id > 0 && function_exists('do_shortcode')) {
-                // Return a simple template that just outputs the Elementor template
-                // This lets the theme handle header/footer and Elementor initialization
-                $elementor_template = SARDIUS_FEED_PLUGIN_PATH . 'templates/archive-elementor-simple.php';
-                if (file_exists($elementor_template)) {
-                    return $elementor_template;
-                }
-            }
-            // Don't override theme template - let theme handle page structure
-            // Plugin content will be injected via shortcode
-        }
-        return $template;
-    }
 
-    public function prevent_archive_404($preempt, $wp_query) {
-        $post_type = isset($wp_query->query['post_type']) ? $wp_query->query['post_type'] : '';
-        if ($post_type === 'sardius_media') {
-            // Ensure 200 OK for our virtual archive page
-            status_header(200);
-            $wp_query->is_404 = false;
-            return true; // short-circuit core 404 handling
-        }
-        return $preempt;
-    }
 
     public function maybe_flush_on_slug_change($option, $old_value, $value) {
         if ($option === 'sardius_media_slug' && $old_value !== $value) {
@@ -864,7 +833,7 @@ class SardiusFeedPlugin {
     }
     
     public function format_date($date_string) {
-        return date_i18n(get_option('date_format'), strtotime($date_string));
+        return date_i18n('M j, Y', strtotime($date_string));
     }
     
     public function format_datetime($timestamp) {
@@ -926,11 +895,6 @@ class SardiusFeedPlugin {
     
     public function add_rewrite_rules() {
         $base_slug = $this->get_base_slug();
-        add_rewrite_rule(
-            '^' . preg_quote($base_slug, '/') . '/?$',
-            'index.php?post_type=sardius_media',
-            'top'
-        );
         add_rewrite_rule(
             '^' . preg_quote($base_slug, '/') . '/([^/]+)/?$',
             'index.php?media_slug=$matches[1]',
@@ -998,9 +962,7 @@ class SardiusFeedPlugin {
         return !empty($media_slug);
     }
 
-    private function is_media_archive_request() {
-        return is_post_type_archive('sardius_media');
-    }
+
 
     public function filter_body_class($classes) {
         if ($this->is_media_request()) {
@@ -1033,13 +995,6 @@ class SardiusFeedPlugin {
                     $classes[] = 'page-id-' . $template_id;
                     $classes[] = 'elementor-page-' . $template_id;
                 }
-            }
-        }
-        if ($this->is_media_archive_request()) {
-            $classes[] = 'sardius-media-archive';
-            if (intval(get_option('sardius_archive_elementor_template_id', 0)) > 0) {
-                $classes[] = 'elementor-page';
-                $classes[] = 'elementor-template-full-width';
             }
         }
         return $classes;
@@ -1174,24 +1129,7 @@ class SardiusFeedPlugin {
 // Initialize the plugin
 new SardiusFeedPlugin();
 
-// Add a dummy post type to represent the feed items
-function sardius_media_post_type() {
-    $base_slug = get_option('sardius_media_slug', 'sardius-media');
-	register_post_type('sardius_media',
-		array(
-			'labels'      => array(
-				'name'          => __('Sardius Media', 'sardius-feed'),
-				'singular_name' => __('Sardius Media', 'sardius-feed'),
-			),
-            'public'      => true,
-            'has_archive' => true,
-            'rewrite'     => array('slug' => $base_slug),
-            'supports'    => array('title', 'editor', 'thumbnail'),
-            'show_in_menu'=> false,
-		)
-	);
-}
-add_action('init', 'sardius_media_post_type');
+
 
 // Add query vars
 add_filter('query_vars', function($vars) {

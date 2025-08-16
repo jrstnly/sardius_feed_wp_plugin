@@ -6,6 +6,7 @@ A WordPress plugin that pulls media from the Sardius content feed and creates vi
 
 - **Smart Feed Integration**: Pulls media data from the Sardius API feed with pagination support
 - **Virtual Pages**: Creates individual pages for each media item with custom URLs
+- **Shortcode Support**: Flexible shortcodes for displaying media content anywhere on your site
 - **Advanced Filtering**: Filter media by category, search terms, and sort by date
 - **Admin Management**: Complete admin interface for managing and viewing media with pagination
 - **Intelligent Caching**: 1-hour cache with automatic refresh on user visits
@@ -14,7 +15,7 @@ A WordPress plugin that pulls media from the Sardius content feed and creates vi
 - **Download Support**: Direct download links for media files
 - **SEO Optimized**: SEO-friendly URLs, meta tags, and structured data
 - **Sitemap Generation**: Automatic XML sitemap at `/sardius-sitemap.xml`
-- **Pagination Support**: Handles large datasets with configurable pagination settings for both admin and frontend
+- **Pagination Support**: Handles large datasets with configurable pagination settings for admin and shortcodes
 
 ## Installation
 
@@ -64,12 +65,15 @@ A WordPress plugin that pulls media from the Sardius content feed and creates vi
    - **Frontend Items Per Page**: Configure how many items to show per page on the public archive page (6, 12, 18, 24, or 36)
    - **Maximum Items to Keep**: Set the maximum number of items to fetch from the API (100-10,000)
 
-### Frontend Search Interface
+### Shortcodes
 
-Use the `[sardius_media_search]` shortcode to add a search interface for visitors:
+The plugin provides several shortcodes for displaying media content anywhere on your site:
+
+#### Media Archive Shortcode
+Use the `[sardius_media_archive]` shortcode to display a complete media archive with search, filtering, and pagination:
 
 ```php
-[sardius_media_search show_search="true" show_series="true" show_date="true" show_sort="true"]
+[sardius_media_archive]
 ```
 
 This provides visitors with:
@@ -77,11 +81,40 @@ This provides visitors with:
 - **Series filtering**: Browse by content series
 - **Date filtering**: Filter by time periods
 - **Sorting options**: Organize results by date or title
+- **Pagination**: Configurable items per page with AJAX loading
 - **Responsive design**: Works on all devices
 
-### Frontend Archive Pagination
+#### Media Search Shortcode
+Use the `[sardius_media_search]` shortcode to add a search interface for visitors:
 
-The archive page now includes pagination to improve performance and user experience:
+```php
+[sardius_media_search show_search="true" show_series="true" show_date="true" show_sort="true"]
+```
+
+#### Media List Shortcode
+Display a filtered list of media items:
+
+```php
+[sardius_media_list category="Weekly Messages" limit="5" sort="desc"]
+```
+
+#### Single Media Shortcode
+Display a specific media item:
+
+```php
+[sardius_media id="56b5f3F79CB6BB6_1095452938"]
+```
+
+#### Media Player Shortcode
+Display just the video player for a specific media item:
+
+```php
+[sardius_media_player id="56b5f3F79CB6BB6_1095452938"]
+```
+
+### Shortcode Pagination
+
+Shortcodes that display multiple items include pagination to improve performance and user experience:
 
 1. **Configurable Items Per Page**:
    - Go to **Sardius Feed** > **Pagination Settings**
@@ -91,7 +124,6 @@ The archive page now includes pagination to improve performance and user experie
 2. **Pagination Features**:
    - **JavaScript-only pagination**: All pagination handled via AJAX for smooth user experience
    - **No page reloads**: Instant page transitions with loading indicators
-   - **URL updates**: Page numbers are reflected in the URL for bookmarking and sharing
    - **Filter integration**: Pagination works seamlessly with search and filtering
    - **Responsive design**: Pagination controls adapt to mobile devices
    - **Loading states**: Visual feedback during page transitions
@@ -175,10 +207,11 @@ You can configure these values in the admin interface under **Sardius Feed** > *
 
 ### Pagination Settings
 
-The plugin now supports pagination for handling large datasets:
+The plugin supports pagination for handling large datasets:
 
 1. **Maximum Items to Keep**: Configure how many media items to fetch and store from the API (default: 1000)
 2. **Admin Items Per Page**: Set how many items to display per page in the admin interface (default: 25)
+3. **Frontend Items Per Page**: Set how many items to display per page in shortcodes (default: 12)
 
 These settings can be configured in the admin interface under **Sardius Feed** > **Pagination Settings**.
 
@@ -336,6 +369,13 @@ The plugin is built with extensibility in mind. You can:
 For support and feature requests, please contact the plugin developer.
 
 ## Changelog
+
+### Version 1.2.0
+- **Removed archive page functionality**: The plugin no longer creates a virtual archive page at the root slug URL
+- **Enhanced shortcode support**: All archive functionality is now available through the `[sardius_media_archive]` shortcode
+- **Simplified architecture**: Removed unnecessary post type registration and archive template handling
+- **Improved flexibility**: Users can now place media archives anywhere on their site using shortcodes
+- **Cleaner URLs**: Only individual media item URLs are created, no conflicting archive routes
 
 ### Version 1.1.0
 - Added pagination support for large datasets

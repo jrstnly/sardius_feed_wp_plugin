@@ -1,5 +1,15 @@
 jQuery(document).ready(function($) {
 
+    // Store the initial page parameter if it exists
+    const initialUrlParams = new URLSearchParams(window.location.search);
+    const initialPage = initialUrlParams.get('media_page');
+    if (initialPage) {
+        window.sardiusInitialPage = initialPage;
+    }
+
+    // Mark initial load at the very beginning
+    window.sardiusIsInitialLoad = true;
+
     // --- Sardius Media Archive Filtering ---
 
     const filters = {
@@ -9,6 +19,102 @@ jQuery(document).ready(function($) {
         dateFrom: '',
         dateTo: ''
     };
+
+    // URL parameter management functions
+    function updateURLParameters() {
+        // Don't update URL during initial load
+        if (window.sardiusIsInitialLoad) {
+            return;
+        }
+        
+        const url = new URL(window.location);
+        
+        // Update or remove filter parameters
+        if (filters.type !== 'message') {
+            url.searchParams.set('type', filters.type);
+        } else {
+            url.searchParams.delete('type');
+        }
+        
+        if (filters.search) {
+            url.searchParams.set('search', filters.search);
+        } else {
+            url.searchParams.delete('search');
+        }
+        
+        if (filters.category) {
+            url.searchParams.set('series', filters.category);
+        } else {
+            url.searchParams.delete('series');
+        }
+        
+        if (filters.dateFrom) {
+            url.searchParams.set('dateFrom', filters.dateFrom);
+        } else {
+            url.searchParams.delete('dateFrom');
+        }
+        
+        if (filters.dateTo) {
+            url.searchParams.set('dateTo', filters.dateTo);
+        } else {
+            url.searchParams.delete('dateTo');
+        }
+        
+        // Preserve page parameter if it exists (from URL or stored initial value)
+        const currentPage = new URLSearchParams(window.location.search).get('media_page');
+        const pageToPreserve = currentPage || window.sardiusInitialPage;
+        if (pageToPreserve) {
+            url.searchParams.set('media_page', pageToPreserve);
+        }
+        
+        console.log('New URL will be:', url.href);
+        // Update URL without page reload
+        window.history.pushState({filters: filters}, '', url);
+    }
+
+    function loadFiltersFromURL() {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Load filter values from URL parameters
+        const type = urlParams.get('type');
+        if (type) {
+            filters.type = type;
+            $(`.filter-button[data-filter-value="${type}"]`).addClass('active').siblings().removeClass('active');
+        }
+        
+        const search = urlParams.get('search');
+        if (search) {
+            filters.search = search;
+            $('#sardius-search').val(search);
+        }
+        
+        const series = urlParams.get('series');
+        if (series) {
+            filters.category = series;
+            $('#sardius-series-filter').val(series);
+        }
+        
+        const dateFrom = urlParams.get('dateFrom');
+        if (dateFrom) {
+            filters.dateFrom = dateFrom;
+            $('#sardius-date-from').val(dateFrom);
+        }
+        
+        const dateTo = urlParams.get('dateTo');
+        if (dateTo) {
+            filters.dateTo = dateTo;
+            $('#sardius-date-to').val(dateTo);
+        }
+        
+        // Check if any filters are active
+        checkFiltersActive();
+        
+        // Store filters globally
+        window.sardiusCurrentFilters = filters;
+        
+        // Return true if any filters were loaded from URL
+        return !!(type || search || series || dateFrom || dateTo);
+    }
 
     const $grid = $('#sardius-media-grid');
     const $filtersContainer = $('#sardius-filters');
@@ -129,6 +235,7 @@ jQuery(document).ready(function($) {
         hideDropdown();
         filters.category = value;
         checkFiltersActive();
+        updateURLParameters();
         applyFilters();
     }
 
@@ -154,6 +261,9 @@ jQuery(document).ready(function($) {
         filters.dateFrom = '';
         filters.dateTo = '';
         
+        // Update global filters
+        window.sardiusCurrentFilters = filters;
+        
         // Reset UI elements
         $('.filter-button').removeClass('active');
         $('.filter-button[data-filter-value="message"]').addClass('active');
@@ -166,11 +276,141 @@ jQuery(document).ready(function($) {
         $resetGroup.hide();
         hideDropdown();
         
+        // Update URL parameters
+        updateURLParameters();
+        
         // Apply filters (which will show all items)
         applyFilters();
     }
 
+    // Global loadPage function for pagination
+    let loadPage = null;
+    let paginationData = null;
+    
+    // Function to scroll pagination to center the active page
+    function scrollToActivePage() {
+        const $paginationNumbers = $('.pagination-numbers');
+        const $currentPage = $('.current-page');
+        
+        if ($currentPage.length && $paginationNumbers.length) {
+            const containerWidth = $paginationNumbers.width();
+            const currentPageOffset = $currentPage.position().left;
+            const currentPageWidth = $currentPage.outerWidth();
+            const scrollLeft = currentPageOffset - (containerWidth / 2) + (currentPageWidth / 2);
+            
+            $paginationNumbers.scrollLeft(scrollLeft);
+        }
+    }
+
+    // Define loadPage function immediately if pagination data is available
+    if (typeof window.sardiusPaginationData !== 'undefined') {
+        paginationData = window.sardiusPaginationData;
+        
+        // Function to load a specific page (no URL updates)
+        loadPage = function(page, filters = {}) {
+            // Show loading state within the grid container
+            $grid.html('<div class="loading-spinner"><div class="spinner"></div><p>Loading media items...</p></div>');
+            
+            $.ajax({
+                url: paginationData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'sardius_get_frontend_paginated_items',
+                    nonce: paginationData.nonce,
+                    page: page,
+                    items_per_page: paginationData.itemsPerPage,
+                    filters: filters
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Update grid content
+                        $grid.html(response.data.items_html);
+                        
+                        // Update pagination
+                        const $pagination = $('.sardius-frontend-pagination');
+                        if (response.data.pagination_html) {
+                            $pagination.html(response.data.pagination_html).show();
+                            // Scroll to center the active page after a brief delay to ensure DOM is updated
+                            setTimeout(scrollToActivePage, 100);
+                        } else {
+                            $pagination.hide();
+                        }
+                        
+                        // Update pagination data
+                        paginationData.currentPage = response.data.pagination.current_page;
+                        paginationData.totalPages = response.data.pagination.total_pages;
+                        
+                        // Scroll to top of grid smoothly only if not initial page load
+                        if (!window.sardiusIsInitialLoad) {
+                            $('html, body').animate({
+                                scrollTop: $grid.offset().top - 100
+                            }, 500);
+                        } else {
+                            // Mark initial load as complete after first load
+                            window.sardiusIsInitialLoad = false;
+                        }
+                    } else {
+                        // Show error message within the grid
+                        $grid.html('<p>Error loading page. Please try again.</p>');
+                    }
+                },
+                error: function() {
+                    // Show error message within the grid
+                    $grid.html('<p>Error loading page. Please try again.</p>');
+                }
+            });
+        };
+        
+        // Function for user pagination navigation (includes URL updates)
+        window.navigateToPage = function(page, filters = {}) {
+            // Load the page content
+            loadPage(page, filters);
+            
+            // Don't update URL during initial load
+            if (window.sardiusIsInitialLoad) {
+                return;
+            }
+            
+            // Update URL for user navigation
+            const url = new URL(window.location);
+            if (page > 1) {
+                url.searchParams.set('media_page', page);
+            } else {
+                url.searchParams.delete('media_page');
+            }
+            // Preserve filter parameters
+            if (filters.type !== 'message') {
+                url.searchParams.set('type', filters.type);
+            }
+            if (filters.search) {
+                url.searchParams.set('search', filters.search);
+            }
+            if (filters.category) {
+                url.searchParams.set('series', filters.category);
+            }
+            if (filters.dateFrom) {
+                url.searchParams.set('dateFrom', filters.dateFrom);
+            }
+            if (filters.dateTo) {
+                url.searchParams.set('dateTo', filters.dateTo);
+            }
+            window.history.pushState({page: page, filters: filters}, '', url);
+        };
+    }
+
     function applyFilters() {
+        // If pagination is available, use it instead of the simple filter
+        if (typeof window.sardiusPaginationData !== 'undefined') {
+            // Get page from URL parameters or default to 1
+            const urlParams = new URLSearchParams(window.location.search);
+            const page = parseInt(urlParams.get('media_page')) || 1;
+            
+            // Load the specified page with current filters
+            loadPage(page, filters);
+            return;
+        }
+        
+        // For non-paginated pages, use the simple filter
         $grid.css('opacity', 0.5); // Dim the grid while loading
 
         $.ajax({
@@ -238,19 +478,25 @@ jQuery(document).ready(function($) {
         const $button = $(this);
         $button.addClass('active').siblings().removeClass('active');
         filters.type = $button.data('filter-value');
+        window.sardiusCurrentFilters = filters;
         checkFiltersActive();
+        updateURLParameters();
         applyFilters();
     });
 
     $('#sardius-search').on('keyup', debounce(function() {
         filters.search = $(this).val();
+        window.sardiusCurrentFilters = filters;
         checkFiltersActive();
+        updateURLParameters();
         applyFilters();
     }, 500));
 
     $('#sardius-series-filter').on('change', function() {
         filters.category = $(this).val();
+        window.sardiusCurrentFilters = filters;
         checkFiltersActive();
+        updateURLParameters();
         applyFilters();
     });
 
@@ -258,7 +504,9 @@ jQuery(document).ready(function($) {
         filters.dateFrom = $('#sardius-date-from').val();
         filters.dateTo = $('#sardius-date-to').val();
         if (filters.dateFrom && filters.dateTo) {
+            window.sardiusCurrentFilters = filters;
             checkFiltersActive();
+            updateURLParameters();
             applyFilters();
         }
     });
@@ -450,22 +698,123 @@ jQuery(document).ready(function($) {
     // Initialize autocomplete
     initializeAutocomplete();
     
+    // Load filters from URL parameters on page load
+    const filtersLoadedFromURL = loadFiltersFromURL();
+    
+    // Check if we need to apply filters on initial load
+    const hasActiveFilters = filters.search !== '' || 
+                            filters.category !== '' || 
+                            filters.dateFrom !== '' || 
+                            filters.dateTo !== '' ||
+                            filters.type !== 'message';
+    
+            // Check if we have a page parameter in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasPageParam = urlParams.has('media_page');
+    
+    // Store the fact that we need to apply filters after pagination is ready
+    window.sardiusNeedsInitialLoad = (!hasActiveFilters && !filtersLoadedFromURL && !hasPageParam && typeof window.sardiusPaginationData === 'undefined');
+    
+    // --- Custom Date Input Behavior ---
+    initializeCustomDateInputs();
+    
+    // --- Custom Date Input Behavior ---
+    function initializeCustomDateInputs() {
+        const $dateInputs = $('#sardius-date-from, #sardius-date-to');
+        let calendarOpen = false;
+        let activeInput = null;
+        
+        $dateInputs.each(function() {
+            const $input = $(this);
+            
+            // Focus event - open calendar
+            $input.on('focus', function(e) {
+                activeInput = this;
+                calendarOpen = true;
+                
+                // Trigger the native date picker
+                this.showPicker();
+                
+                // Prevent default focus behavior
+                e.preventDefault();
+            });
+            
+            // Blur event - handle calendar interaction
+            $input.on('blur', function(e) {
+                // Use a small delay to check if user clicked on calendar
+                setTimeout(() => {
+                    // If calendar is still open, don't close it
+                    if (calendarOpen && activeInput === this) {
+                        this.focus();
+                        return;
+                    }
+                    
+                    // Calendar is closed, proceed with normal blur
+                    calendarOpen = false;
+                    activeInput = null;
+                }, 100);
+            });
+            
+            // Input event - handle date selection
+            $input.on('input', function() {
+                // When user selects a date, close the calendar
+                calendarOpen = false;
+                activeInput = null;
+            });
+            
+            // Click event - ensure focus is maintained
+            $input.on('click', function(e) {
+                if (!calendarOpen) {
+                    this.focus();
+                }
+            });
+        });
+        
+        // Handle clicks outside to close calendar
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('input[type="date"]').length && calendarOpen) {
+                calendarOpen = false;
+                activeInput = null;
+            }
+        });
+    }
+    
     // --- Sardius Media Archive Pagination ---
     
     // Check if pagination data is available
     if (typeof window.sardiusPaginationData !== 'undefined') {
-        console.log('Sardius pagination data found:', window.sardiusPaginationData);
         initializePagination();
     } else {
-        console.log('No Sardius pagination data found');
+        // For non-paginated pages, if we have URL parameters, we should apply them
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasURLParams = urlParams.has('type') || urlParams.has('search') || 
+                           urlParams.has('series') || urlParams.has('dateFrom') || 
+                           urlParams.has('dateTo');
+        
+        if (hasURLParams || window.sardiusNeedsInitialLoad) {
+            // Apply filters to show filtered results on non-paginated pages
+            applyFilters();
+        }
     }
     
     function initializePagination() {
         const paginationData = window.sardiusPaginationData;
         const $pagination = $('.sardius-frontend-pagination');
         
-        // Load initial page
-        loadPage(1);
+        // Mark that this is the initial load (only if not already set)
+        if (typeof window.sardiusIsInitialLoad === 'undefined') {
+            window.sardiusIsInitialLoad = true;
+        }
+        
+        // Get initial page from stored value or URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialPage = parseInt(window.sardiusInitialPage || urlParams.get('media_page')) || 1;
+        
+        // Ensure we have the current filters (they should be loaded by now)
+        const currentFilters = window.sardiusCurrentFilters || filters;
+        
+        // Load initial page with current filters
+        loadPage(initialPage, currentFilters);
         
         // Scroll to center the active page on initial load
         setTimeout(scrollToActivePage, 500);
@@ -477,97 +826,66 @@ jQuery(document).ready(function($) {
             const page = $button.data('page');
             
             if (page && page !== paginationData.currentPage) {
-                loadPage(page);
+                // Use current filters when paginating and update URL
+                navigateToPage(page, window.sardiusCurrentFilters || {});
             }
         });
         
-        // Function to scroll pagination to center the active page
-        function scrollToActivePage() {
-            const $paginationNumbers = $('.pagination-numbers');
-            const $currentPage = $('.current-page');
-            
-            if ($currentPage.length && $paginationNumbers.length) {
-                const containerWidth = $paginationNumbers.width();
-                const currentPageOffset = $currentPage.position().left;
-                const currentPageWidth = $currentPage.outerWidth();
-                const scrollLeft = currentPageOffset - (containerWidth / 2) + (currentPageWidth / 2);
-                
-                $paginationNumbers.scrollLeft(scrollLeft);
-            }
-        }
+        // scrollToActivePage function is already defined globally above
         
-        // Handle AJAX pagination with filters
-        function loadPage(page, filters = {}) {
-            // Store current content for fallback
-            const currentContent = $grid.html();
-            
-            $.ajax({
-                url: paginationData.ajaxUrl,
-                type: 'POST',
-                data: {
-                    action: 'sardius_get_frontend_paginated_items',
-                    nonce: paginationData.nonce,
-                    page: page,
-                    items_per_page: paginationData.itemsPerPage,
-                    filters: filters
-                },
-                success: function(response) {
-                    if (response.success) {
-                        // Update grid content
-                        $grid.html(response.data.items_html);
-                        
-                        // Update pagination
-                        if (response.data.pagination_html) {
-                            $pagination.html(response.data.pagination_html).show();
-                            // Scroll to center the active page after a brief delay to ensure DOM is updated
-                            setTimeout(scrollToActivePage, 100);
-                        } else {
-                            $pagination.hide();
-                        }
-                        
-                        // Update pagination data
-                        paginationData.currentPage = response.data.pagination.current_page;
-                        paginationData.totalPages = response.data.pagination.total_pages;
-                        
-                        // Scroll to top of grid smoothly
-                        $('html, body').animate({
-                            scrollTop: $grid.offset().top - 100
-                        }, 500);
-                        
-                        // Update URL without page reload (for bookmarking)
-                        const url = new URL(window.location);
-                        if (page > 1) {
-                            url.searchParams.set('page', page);
-                        } else {
-                            url.searchParams.delete('page');
-                        }
-                        window.history.pushState({page: page}, '', url);
-                    } else {
-                        // Keep current content on error
-                        console.error('Error loading page:', response);
-                    }
-                },
-                error: function() {
-                    // Keep current content on error
-                    console.error('Error loading page');
-                }
-            });
-        }
+        // loadPage function is already defined globally above
         
         // Override the existing applyFilters function to work with pagination
         const originalApplyFilters = applyFilters;
         applyFilters = function() {
-            // Reset to first page when applying filters
-            loadPage(1, filters);
+            // Get current page from stored value, URL, or default to 1
+            const urlParams = new URLSearchParams(window.location.search);
+            const currentPage = parseInt(window.sardiusInitialPage || urlParams.get('media_page')) || 1;
+            
+            // Load the current page with new filters (don't reset to page 1)
+            loadPage(currentPage, filters);
         };
+        
+        // Store current filters globally for pagination
+        window.sardiusCurrentFilters = filters;
         
         // Handle browser back/forward buttons
         $(window).on('popstate', function(e) {
             const urlParams = new URLSearchParams(window.location.search);
-            const page = parseInt(urlParams.get('page')) || 1;
-            if (page !== paginationData.currentPage) {
-                loadPage(page, filters);
+            const page = parseInt(urlParams.get('media_page')) || 1;
+            
+            // Check if filters have changed
+            const newFilters = {
+                type: urlParams.get('type') || 'message',
+                search: urlParams.get('search') || '',
+                category: urlParams.get('series') || '',
+                dateFrom: urlParams.get('dateFrom') || '',
+                dateTo: urlParams.get('dateTo') || ''
+            };
+            
+            // Update filters if they've changed
+            let filtersChanged = false;
+            for (let key in newFilters) {
+                if (newFilters[key] !== filters[key]) {
+                    filters[key] = newFilters[key];
+                    filtersChanged = true;
+                }
             }
+            
+            // Update UI if filters changed
+            if (filtersChanged) {
+                // Update UI elements
+                $(`.filter-button[data-filter-value="${filters.type}"]`).addClass('active').siblings().removeClass('active');
+                $('#sardius-search').val(filters.search);
+                $('#sardius-series-filter').val(filters.category);
+                $('#sardius-date-from').val(filters.dateFrom);
+                $('#sardius-date-to').val(filters.dateTo);
+                checkFiltersActive();
+                window.sardiusCurrentFilters = filters;
+            }
+            
+            // Load page with current filters
+            loadPage(page, filters);
         });
     }
 }); 

@@ -39,7 +39,7 @@ $frontend_nonce = wp_create_nonce('sardius_frontend_nonce');
         <div class="filter-group">
             <h3><?php _e('WATCH GRACE LIVE:', 'sardius-feed'); ?></h3>
             <p>SUNDAYS 9:00A & 10:40A CT</p>
-            <a href="#" class="watch-now-button"><?php _e('WATCH NOW', 'sardius-feed'); ?></a>
+            <a href="https://grace.live" target="_blank" rel="noopener noreferrer" class="watch-now-button"><?php _e('WATCH NOW', 'sardius-feed'); ?></a>
         </div>
 
         <div class="filter-group">
@@ -96,7 +96,7 @@ $frontend_nonce = wp_create_nonce('sardius_frontend_nonce');
 <script>
 // Store pagination data for AJAX requests
 window.sardiusPaginationData = {
-    currentPage: 1,
+    currentPage: <?php echo isset($_GET['media_page']) ? intval($_GET['media_page']) : 1; ?>,
     totalPages: 0,
     itemsPerPage: <?php echo $items_per_page; ?>,
     nonce: '<?php echo $frontend_nonce; ?>',
