@@ -60,12 +60,8 @@ jQuery(document).ready(function($) {
             url.searchParams.delete('dateTo');
         }
         
-        // Preserve page parameter if it exists (from URL or stored initial value)
-        const currentPage = new URLSearchParams(window.location.search).get('media_page');
-        const pageToPreserve = currentPage || window.sardiusInitialPage;
-        if (pageToPreserve) {
-            url.searchParams.set('media_page', pageToPreserve);
-        }
+        // Remove page parameter when filters are applied (reset to page 1)
+        url.searchParams.delete('media_page');
         
         console.log('New URL will be:', url.href);
         // Update URL without page reload
@@ -401,11 +397,10 @@ jQuery(document).ready(function($) {
     function applyFilters() {
         // If pagination is available, use it instead of the simple filter
         if (typeof window.sardiusPaginationData !== 'undefined') {
-            // Get page from URL parameters or default to 1
-            const urlParams = new URLSearchParams(window.location.search);
-            const page = parseInt(urlParams.get('media_page')) || 1;
+            // Reset to page 1 when filters are applied
+            const page = 1;
             
-            // Load the specified page with current filters
+            // Load page 1 with current filters
             loadPage(page, filters);
             return;
         }
@@ -838,12 +833,11 @@ jQuery(document).ready(function($) {
         // Override the existing applyFilters function to work with pagination
         const originalApplyFilters = applyFilters;
         applyFilters = function() {
-            // Get current page from stored value, URL, or default to 1
-            const urlParams = new URLSearchParams(window.location.search);
-            const currentPage = parseInt(window.sardiusInitialPage || urlParams.get('media_page')) || 1;
+            // Reset to page 1 when filters are applied
+            const page = 1;
             
-            // Load the current page with new filters (don't reset to page 1)
-            loadPage(currentPage, filters);
+            // Load page 1 with new filters
+            loadPage(page, filters);
         };
         
         // Store current filters globally for pagination
