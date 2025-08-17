@@ -460,7 +460,7 @@ jQuery(document).ready(function($) {
                         <h3><a href="${item.url}">${item.title}</a></h3>
                         <div class="media-date">${item.air_date_formatted}</div>
                         ${item.series ? `<p><strong>Series:</strong> ${item.series}</p>` : ''}
-                        ${item.bible_reference ? `<p><strong>Text:</strong> ${item.bible_reference}</p>` : ''}
+                        ${item.bible_reference ? `<p><strong>Scripture:</strong> ${item.bible_reference}</p>` : ''}
                     </div>
                 </div>
             `;

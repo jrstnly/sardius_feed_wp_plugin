@@ -1045,7 +1045,7 @@ class SardiusFeedPlugin {
                     <p><strong><?php _e('Series:', 'sardius-feed'); ?></strong> <?php echo esc_html($series); ?></p>
                 <?php endif; 
                 if ($bible_reference) : ?>
-                    <p><strong><?php _e('Text:', 'sardius-feed'); ?></strong> <?php echo esc_html($bible_reference); ?></p>
+                    <p><strong><?php _e('Scripture:', 'sardius-feed'); ?></strong> <?php echo esc_html($bible_reference); ?></p>
                 <?php endif; ?>
             </div>
         </div>
