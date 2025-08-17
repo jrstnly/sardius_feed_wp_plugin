@@ -1,38 +1,5 @@
 /* General Sardius Feed Plugin Styles */
 
-/* Video player styles for single media pages */
-.sardius-media-single .media-player {
-    background: #000;
-}
-
-.sardius-media-single .media-header {
-    background-color: #f7f7f7;
-    padding: 1.5rem;
-    border: 1px solid #e0e0e0;
-    border-top: 0;
-}
-
-.sardius-media-single .media-title {
-    font-size: 1.8rem;
-    font-weight: 600;
-    margin-top: 0;
-    margin-bottom: 0.5rem;
-}
-
-.sardius-media-single .media-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-    color: #555;
-}
-
-.sardius-media-single .media-description {
-    padding: 1.5rem;
-    border: 1px solid #e0e0e0;
-    border-top: 0;
-}
-
 /* General utility classes */
 .no-video {
     display: flex;
