@@ -458,6 +458,43 @@
     padding-right: 2.5rem;
 }
 
+/* Clear Speaker Button Styles */
+.autocomplete-container .clear-speaker-button {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: none;
+    background-color: #e0e0e0;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    transition: all 0.2s ease;
+    z-index: 1001;
+}
+
+.autocomplete-container .clear-speaker-button:hover {
+    background-color: #d0d0d0;
+    color: #333;
+    border: none;
+}
+
+.autocomplete-container .clear-speaker-button svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* Adjust input padding when clear button is visible */
+#sardius-speaker-filter.has-clear-button {
+    padding-right: 2.5rem;
+}
+
 /* Frontend Pagination Styles */
 .sardius-frontend-pagination {
     display: flex;

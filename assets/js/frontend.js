@@ -16,6 +16,7 @@ jQuery(document).ready(function($) {
         type: 'message',
         search: '',
         category: '',
+        speaker: '',
         dateFrom: '',
         dateTo: ''
     };
@@ -46,6 +47,12 @@ jQuery(document).ready(function($) {
             url.searchParams.set('series', filters.category);
         } else {
             url.searchParams.delete('series');
+        }
+        
+        if (filters.speaker) {
+            url.searchParams.set('speaker', filters.speaker);
+        } else {
+            url.searchParams.delete('speaker');
         }
         
         if (filters.dateFrom) {
@@ -90,6 +97,12 @@ jQuery(document).ready(function($) {
             $('#sardius-series-filter').val(series);
         }
         
+        const speaker = urlParams.get('speaker');
+        if (speaker) {
+            filters.speaker = speaker;
+            $('#sardius-speaker-filter').val(speaker);
+        }
+        
         const dateFrom = urlParams.get('dateFrom');
         if (dateFrom) {
             filters.dateFrom = dateFrom;
@@ -111,6 +124,9 @@ jQuery(document).ready(function($) {
         // Update clear series button visibility
         updateClearSeriesButton();
         
+        // Update clear speaker button visibility
+        updateClearSpeakerButton();
+        
         // Update clear date button visibility
         updateClearDateButton();
         
@@ -118,7 +134,7 @@ jQuery(document).ready(function($) {
         updateClearSearchButton();
         
         // Return true if any filters were loaded from URL
-        return !!(type || search || series || dateFrom || dateTo);
+        return !!(type || search || series || speaker || dateFrom || dateTo);
     }
 
     const $grid = $('#sardius-media-grid');
@@ -126,58 +142,98 @@ jQuery(document).ready(function($) {
     const $resetGroup = $('#reset-filters-group');
     const $seriesInput = $('#sardius-series-filter');
     const $seriesDropdown = $('#series-dropdown');
-    const $seriesItems = $('.autocomplete-item');
+    const $seriesItems = $('#series-dropdown .autocomplete-item');
     const $clearSeriesButton = $('#clear-series');
+    const $speakerInput = $('#sardius-speaker-filter');
+    const $speakerDropdown = $('#speaker-dropdown');
+    const $speakerItems = $('#speaker-dropdown .autocomplete-item');
+    const $clearSpeakerButton = $('#clear-speaker');
     const $clearDateButton = $('#clear-date-range');
     const $clearSearchButton = $('#clear-search');
 
-    let selectedIndex = -1;
-    let filteredItems = [];
+    let seriesSelectedIndex = -1;
+    let speakerSelectedIndex = -1;
+    let seriesFilteredItems = [];
+    let speakerFilteredItems = [];
 
     function initializeAutocomplete() {
+        // Initialize series autocomplete
+        initializeSeriesAutocomplete();
+        
+        // Initialize speaker autocomplete
+        initializeSpeakerAutocomplete();
+    }
+    
+    function initializeSeriesAutocomplete() {
         // Store all series items for filtering
-        filteredItems = $seriesItems.toArray();
+        seriesFilteredItems = $seriesItems.toArray();
         
         // Show dropdown on focus
         $seriesInput.on('focus', function() {
-            showDropdown();
+            showSeriesDropdown();
         });
         
         // Handle input changes for filtering
         $seriesInput.on('input', function() {
-            filterDropdown();
+            filterSeriesDropdown();
         });
         
         // Handle keyboard navigation
         $seriesInput.on('keydown', function(e) {
-            handleKeyboardNavigation(e);
+            handleSeriesKeyboardNavigation(e);
         });
         
         // Handle item selection
         $seriesDropdown.on('click', '.autocomplete-item', function() {
-            selectItem($(this));
+            selectSeriesItem($(this));
+        });
+    }
+    
+    function initializeSpeakerAutocomplete() {
+        // Store all speaker items for filtering
+        speakerFilteredItems = $speakerItems.toArray();
+        
+        // Show dropdown on focus
+        $speakerInput.on('focus', function() {
+            showSpeakerDropdown();
         });
         
-        // Close dropdown when clicking outside
-        $(document).on('click', function(e) {
-            if (!$(e.target).closest('.autocomplete-container').length) {
-                hideDropdown();
-            }
+        // Handle input changes for filtering
+        $speakerInput.on('input', function() {
+            filterSpeakerDropdown();
+        });
+        
+        // Handle keyboard navigation
+        $speakerInput.on('keydown', function(e) {
+            handleSpeakerKeyboardNavigation(e);
+        });
+        
+        // Handle item selection
+        $speakerDropdown.on('click', '.autocomplete-item', function() {
+            selectSpeakerItem($(this));
         });
     }
+    
+    // Close dropdown when clicking outside
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('.autocomplete-container').length) {
+            hideSeriesDropdown();
+            hideSpeakerDropdown();
+        }
+    });
 
-    function showDropdown() {
+    function showSeriesDropdown() {
         $seriesDropdown.show();
-        filterDropdown();
+        filterSeriesDropdown();
     }
 
-    function hideDropdown() {
+    function hideSeriesDropdown() {
         $seriesDropdown.hide();
-        selectedIndex = -1;
+        seriesSelectedIndex = -1;
         $seriesItems.removeClass('highlighted');
     }
 
-    function filterDropdown() {
+    function filterSeriesDropdown() {
         const searchTerm = $seriesInput.val().toLowerCase();
         
         $seriesItems.each(function() {
@@ -197,51 +253,132 @@ jQuery(document).ready(function($) {
             $seriesDropdown.hide();
         }
         
-        selectedIndex = -1;
+        seriesSelectedIndex = -1;
         $seriesItems.removeClass('highlighted');
     }
+    
+    function showSpeakerDropdown() {
+        $speakerDropdown.show();
+        filterSpeakerDropdown();
+    }
 
-    function handleKeyboardNavigation(e) {
+    function hideSpeakerDropdown() {
+        $speakerDropdown.hide();
+        speakerSelectedIndex = -1;
+        $speakerItems.removeClass('highlighted');
+    }
+
+    function filterSpeakerDropdown() {
+        const searchTerm = $speakerInput.val().toLowerCase();
+        
+        $speakerItems.each(function() {
+            const itemText = $(this).text().toLowerCase();
+            if (itemText.includes(searchTerm)) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+        
+        // Show dropdown if there are visible items
+        const visibleItems = $speakerItems.filter(':visible');
+        if (visibleItems.length > 0) {
+            $speakerDropdown.show();
+        } else {
+            $speakerDropdown.hide();
+        }
+        
+        speakerSelectedIndex = -1;
+        $speakerItems.removeClass('highlighted');
+    }
+
+    function handleSeriesKeyboardNavigation(e) {
         const visibleItems = $seriesItems.filter(':visible');
         
         switch(e.keyCode) {
             case 40: // Down arrow
                 e.preventDefault();
-                selectedIndex = Math.min(selectedIndex + 1, visibleItems.length - 1);
-                highlightItem(visibleItems.eq(selectedIndex));
+                seriesSelectedIndex = Math.min(seriesSelectedIndex + 1, visibleItems.length - 1);
+                highlightSeriesItem(visibleItems.eq(seriesSelectedIndex));
                 break;
             case 38: // Up arrow
                 e.preventDefault();
-                selectedIndex = Math.max(selectedIndex - 1, -1);
-                if (selectedIndex === -1) {
+                seriesSelectedIndex = Math.max(seriesSelectedIndex - 1, -1);
+                if (seriesSelectedIndex === -1) {
                     $seriesItems.removeClass('highlighted');
                 } else {
-                    highlightItem(visibleItems.eq(selectedIndex));
+                    highlightSeriesItem(visibleItems.eq(seriesSelectedIndex));
                 }
                 break;
             case 13: // Enter
                 e.preventDefault();
-                if (selectedIndex >= 0) {
-                    selectItem(visibleItems.eq(selectedIndex));
+                if (seriesSelectedIndex >= 0) {
+                    selectSeriesItem(visibleItems.eq(seriesSelectedIndex));
                 }
                 break;
             case 27: // Escape
-                hideDropdown();
+                hideSeriesDropdown();
                 $seriesInput.blur();
                 break;
         }
     }
+    
+    function handleSpeakerKeyboardNavigation(e) {
+        const visibleItems = $speakerItems.filter(':visible');
+        
+        switch(e.keyCode) {
+            case 40: // Down arrow
+                e.preventDefault();
+                speakerSelectedIndex = Math.min(speakerSelectedIndex + 1, visibleItems.length - 1);
+                highlightSpeakerItem(visibleItems.eq(speakerSelectedIndex));
+                break;
+            case 38: // Up arrow
+                e.preventDefault();
+                speakerSelectedIndex = Math.max(speakerSelectedIndex - 1, -1);
+                if (speakerSelectedIndex === -1) {
+                    $speakerItems.removeClass('highlighted');
+                } else {
+                    highlightSpeakerItem(visibleItems.eq(speakerSelectedIndex));
+                }
+                break;
+            case 13: // Enter
+                e.preventDefault();
+                if (speakerSelectedIndex >= 0) {
+                    selectSpeakerItem(visibleItems.eq(speakerSelectedIndex));
+                }
+                break;
+            case 27: // Escape
+                hideSpeakerDropdown();
+                $speakerInput.blur();
+                break;
+        }
+    }
 
-    function highlightItem($item) {
+    function highlightSeriesItem($item) {
         $seriesItems.removeClass('highlighted');
         $item.addClass('highlighted');
     }
+    
+    function highlightSpeakerItem($item) {
+        $speakerItems.removeClass('highlighted');
+        $item.addClass('highlighted');
+    }
 
-    function selectItem($item) {
+    function selectSeriesItem($item) {
         const value = $item.data('value');
         $seriesInput.val(value);
-        hideDropdown();
+        hideSeriesDropdown();
         filters.category = value;
+        checkFiltersActive();
+        updateURLParameters();
+        applyFilters();
+    }
+    
+    function selectSpeakerItem($item) {
+        const value = $item.data('value');
+        $speakerInput.val(value);
+        hideSpeakerDropdown();
+        filters.speaker = value;
         checkFiltersActive();
         updateURLParameters();
         applyFilters();
@@ -250,6 +387,7 @@ jQuery(document).ready(function($) {
     function checkFiltersActive() {
         const hasActiveFilters = filters.search !== '' || 
                                 filters.category !== '' || 
+                                filters.speaker !== '' || 
                                 filters.dateFrom !== '' || 
                                 filters.dateTo !== '' ||
                                 filters.type !== 'message';
@@ -262,6 +400,9 @@ jQuery(document).ready(function($) {
         
         // Update clear series button visibility
         updateClearSeriesButton();
+        
+        // Update clear speaker button visibility
+        updateClearSpeakerButton();
         
         // Update clear date button visibility
         updateClearDateButton();
@@ -277,6 +418,16 @@ jQuery(document).ready(function($) {
         } else {
             $clearSeriesButton.hide();
             $seriesInput.removeClass('has-clear-button');
+        }
+    }
+    
+    function updateClearSpeakerButton() {
+        if (filters.speaker !== '') {
+            $clearSpeakerButton.show();
+            $speakerInput.addClass('has-clear-button');
+        } else {
+            $clearSpeakerButton.hide();
+            $speakerInput.removeClass('has-clear-button');
         }
     }
     
@@ -304,6 +455,7 @@ jQuery(document).ready(function($) {
         filters.type = 'message';
         filters.search = '';
         filters.category = '';
+        filters.speaker = '';
         filters.dateFrom = '';
         filters.dateTo = '';
         
@@ -315,15 +467,18 @@ jQuery(document).ready(function($) {
         $('.filter-button[data-filter-value="message"]').addClass('active');
         $('#sardius-search').val('');
         $('#sardius-series-filter').val('');
+        $('#sardius-speaker-filter').val('');
         $('#sardius-date-from').val('');
         $('#sardius-date-to').val('');
         
         // Hide reset button and dropdown
         $resetGroup.hide();
-        hideDropdown();
+        hideSeriesDropdown();
+        hideSpeakerDropdown();
         
         // Update clear button visibility
         updateClearSeriesButton();
+        updateClearSpeakerButton();
         updateClearDateButton();
         updateClearSearchButton();
         
@@ -438,6 +593,9 @@ jQuery(document).ready(function($) {
             }
             if (filters.category) {
                 url.searchParams.set('series', filters.category);
+            }
+            if (filters.speaker) {
+                url.searchParams.set('speaker', filters.speaker);
             }
             if (filters.dateFrom) {
                 url.searchParams.set('dateFrom', filters.dateFrom);
@@ -584,7 +742,28 @@ jQuery(document).ready(function($) {
         
         // Update UI
         checkFiltersActive();
-        hideDropdown();
+        hideSeriesDropdown();
+        
+        // Update URL and apply filters
+        updateURLParameters();
+        applyFilters();
+    });
+    
+    // Clear speaker button event handler
+    $clearSpeakerButton.on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Clear the speaker filter
+        filters.speaker = '';
+        $speakerInput.val('');
+        
+        // Update global filters
+        window.sardiusCurrentFilters = filters;
+        
+        // Update UI
+        checkFiltersActive();
+        hideSpeakerDropdown();
         
         // Update URL and apply filters
         updateURLParameters();
@@ -822,6 +1001,9 @@ jQuery(document).ready(function($) {
     // Initialize clear series button visibility
     updateClearSeriesButton();
     
+    // Initialize clear speaker button visibility
+    updateClearSpeakerButton();
+    
     // Initialize clear date button visibility
     updateClearDateButton();
     
@@ -831,6 +1013,7 @@ jQuery(document).ready(function($) {
     // Check if we need to apply filters on initial load
     const hasActiveFilters = filters.search !== '' || 
                             filters.category !== '' || 
+                            filters.speaker !== '' || 
                             filters.dateFrom !== '' || 
                             filters.dateTo !== '' ||
                             filters.type !== 'message';
@@ -922,8 +1105,8 @@ jQuery(document).ready(function($) {
         // For non-paginated pages, if we have URL parameters, we should apply them
         const urlParams = new URLSearchParams(window.location.search);
         const hasURLParams = urlParams.has('type') || urlParams.has('search') || 
-                           urlParams.has('series') || urlParams.has('dateFrom') || 
-                           urlParams.has('dateTo');
+                           urlParams.has('series') || urlParams.has('speaker') || 
+                           urlParams.has('dateFrom') || urlParams.has('dateTo');
         
         if (hasURLParams || window.sardiusNeedsInitialLoad) {
             // Apply filters to show filtered results on non-paginated pages
@@ -992,6 +1175,7 @@ jQuery(document).ready(function($) {
                 type: urlParams.get('type') || 'message',
                 search: urlParams.get('search') || '',
                 category: urlParams.get('series') || '',
+                speaker: urlParams.get('speaker') || '',
                 dateFrom: urlParams.get('dateFrom') || '',
                 dateTo: urlParams.get('dateTo') || ''
             };
@@ -1011,6 +1195,7 @@ jQuery(document).ready(function($) {
                 $(`.filter-button[data-filter-value="${filters.type}"]`).addClass('active').siblings().removeClass('active');
                 $('#sardius-search').val(filters.search);
                 $('#sardius-series-filter').val(filters.category);
+                $('#sardius-speaker-filter').val(filters.speaker);
                 $('#sardius-date-from').val(filters.dateFrom);
                 $('#sardius-date-to').val(filters.dateTo);
                 checkFiltersActive();

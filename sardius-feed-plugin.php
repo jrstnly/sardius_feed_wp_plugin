@@ -725,6 +725,15 @@ class SardiusFeedPlugin {
             });
         }
         
+        // Filter by speaker
+        if (!empty($filters['speaker'])) {
+            $filtered = array_filter($filtered, function($item) use ($filters) {
+                return isset($item['bios']['speakers']) && 
+                       is_array($item['bios']['speakers']) && 
+                       in_array($filters['speaker'], $item['bios']['speakers']);
+            });
+        }
+        
         // Filter by search term
         if (!empty($filters['search'])) {
             $search_term = strtolower($filters['search']);
@@ -732,6 +741,7 @@ class SardiusFeedPlugin {
                 return strpos(strtolower($item['title']), $search_term) !== false ||
                        strpos(strtolower($item['searchText'] ?? ''), $search_term) !== false ||
                        strpos(strtolower($item['series'] ?? ''), $search_term) !== false ||
+                       strpos(strtolower(implode(', ', $item['bios']['speakers'] ?? [])), $search_term) !== false ||
                        strpos(strtolower(implode(', ', $item['metadata']['bibleReference'] ?? [])), $search_term) !== false;
             });
         }

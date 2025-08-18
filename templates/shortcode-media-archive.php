@@ -75,6 +75,38 @@ $frontend_nonce = wp_create_nonce('sardius_frontend_nonce');
         </div>
 
         <div class="filter-group">
+            <h3><?php _e('SPEAKER:', 'sardius-feed'); ?></h3>
+            <div class="autocomplete-container">
+                <input type="text" id="sardius-speaker-filter" placeholder="<?php _e('Select Speaker', 'sardius-feed'); ?>" autocomplete="off">
+                <button type="button" id="clear-speaker" class="clear-speaker-button" style="display: none;" aria-label="Clear speaker filter">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
+                    </svg>
+                </button>
+                <div class="autocomplete-dropdown" id="speaker-dropdown" style="display: none;">
+                    <?php 
+                    // Get all unique speakers for the filter dropdown
+                    $all_speakers = [];
+                    if (!empty($items)) {
+                        foreach ($items as $item) {
+                            if (!empty($item['bios']['speakers']) && is_array($item['bios']['speakers'])) {
+                                foreach ($item['bios']['speakers'] as $speaker) {
+                                    if (!empty($speaker) && !in_array($speaker, $all_speakers)) {
+                                        $all_speakers[] = $speaker;
+                                    }
+                                }
+                            }
+                        }
+                        sort($all_speakers);
+                    }
+                    foreach ($all_speakers as $speaker) : ?>
+                        <div class="autocomplete-item" data-value="<?php echo esc_attr($speaker); ?>"><?php echo esc_html($speaker); ?></div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+
+        <div class="filter-group">
             <h3><?php _e('DATE RANGE:', 'sardius-feed'); ?></h3>
             <div class="date-range-container">
                 <div class="date-range-input">
