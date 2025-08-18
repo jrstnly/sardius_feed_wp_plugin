@@ -152,23 +152,88 @@
     box-shadow: 0 0 0 2px rgba(0, 124, 186, 0.2);
 }
 
-#sardius-filters .date-range-fields {
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
+#sardius-filters .date-range-container {
+    position: relative;
 }
 
-#sardius-filters .date-range-fields input[type="date"] {
+#sardius-filters .date-range-input {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    border: 1px solid #ddd;
+    background-color: #fff;
+    border-radius: 4px;
+    overflow: hidden;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#sardius-filters .date-range-input:focus-within {
+    border-color: var(--e-global-color-primary, #007cba);
+    box-shadow: 0 0 0 2px rgba(0, 124, 186, 0.2);
+}
+
+#sardius-filters .date-range-input input[type="date"] {
     flex: 1;
     min-width: 0;
-    width: auto;
+    border: none;
+    background: transparent;
+    padding: 0.75rem 4px;
+    font-size: 0.875rem;
+    text-align: center;
+    color: #333;
+    outline: none;
 }
 
-#sardius-filters .date-range-fields span {
-    font-size: 0.875rem;
+#sardius-filters .date-range-input input[type="date"]:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+#sardius-filters .date-range-input .date-separator {
+    font-size: 1rem;
     color: #666;
     font-weight: 500;
     white-space: nowrap;
+    padding: 0 8px 4px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1rem;
+}
+
+/* Clear Date Button Styles */
+.date-range-container .clear-date-button {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: none;
+    background-color: #e0e0e0;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    margin-left: 4px;
+    margin-right: 6px;
+}
+
+.date-range-container .clear-date-button:hover {
+    background-color: #d0d0d0;
+    color: #333;
+    border: none;
+}
+
+.date-range-container .clear-date-button svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* Clear button is always positioned, no need for conditional padding */
+.date-range-input {
+    position: relative;
 }
 
 #sardius-filters .filter-button {
@@ -249,6 +314,43 @@
     color: var(--e-global-color-primary, #007cba);
 }
 
+/* Clear Search Button Styles */
+.search-container .clear-search-button {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: none;
+    background-color: #e0e0e0;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    transition: all 0.2s ease;
+    z-index: 1001;
+}
+
+.search-container .clear-search-button:hover {
+    background-color: #d0d0d0;
+    color: #333;
+    border: none;
+}
+
+.search-container .clear-search-button svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* Adjust input padding when clear button is visible */
+#sardius-search.has-clear-button {
+    padding-right: 2.5rem;
+}
+
 .reset-filters-button {
     background-color: #6c757d;
     color: #fff;
@@ -319,16 +421,41 @@
     background-color: #e9ecef;
 }
 
-#sardius-series-filter {
-    /* No border radius */
+/* Clear Series Button Styles */
+.autocomplete-container .clear-series-button {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: none;
+    background-color: #e0e0e0;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    transition: all 0.2s ease;
+    z-index: 1001;
 }
 
-#sardius-series-filter:focus {
-    /* No border radius */
+.autocomplete-container .clear-series-button:hover {
+    background-color: #d0d0d0;
+    color: #333;
+    border: none;
 }
 
-.autocomplete-dropdown:not(:empty) + #sardius-series-filter {
-    /* No border radius */
+.autocomplete-container .clear-series-button svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* Adjust input padding when clear button is visible */
+#sardius-series-filter.has-clear-button {
+    padding-right: 2.5rem;
 }
 
 /* Frontend Pagination Styles */

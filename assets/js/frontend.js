@@ -108,6 +108,15 @@ jQuery(document).ready(function($) {
         // Store filters globally
         window.sardiusCurrentFilters = filters;
         
+        // Update clear series button visibility
+        updateClearSeriesButton();
+        
+        // Update clear date button visibility
+        updateClearDateButton();
+        
+        // Update clear search button visibility
+        updateClearSearchButton();
+        
         // Return true if any filters were loaded from URL
         return !!(type || search || series || dateFrom || dateTo);
     }
@@ -118,6 +127,9 @@ jQuery(document).ready(function($) {
     const $seriesInput = $('#sardius-series-filter');
     const $seriesDropdown = $('#series-dropdown');
     const $seriesItems = $('.autocomplete-item');
+    const $clearSeriesButton = $('#clear-series');
+    const $clearDateButton = $('#clear-date-range');
+    const $clearSearchButton = $('#clear-search');
 
     let selectedIndex = -1;
     let filteredItems = [];
@@ -247,6 +259,44 @@ jQuery(document).ready(function($) {
         } else {
             $resetGroup.hide();
         }
+        
+        // Update clear series button visibility
+        updateClearSeriesButton();
+        
+        // Update clear date button visibility
+        updateClearDateButton();
+        
+        // Update clear search button visibility
+        updateClearSearchButton();
+    }
+    
+    function updateClearSeriesButton() {
+        if (filters.category !== '') {
+            $clearSeriesButton.show();
+            $seriesInput.addClass('has-clear-button');
+        } else {
+            $clearSeriesButton.hide();
+            $seriesInput.removeClass('has-clear-button');
+        }
+    }
+    
+    function updateClearDateButton() {
+        if (filters.dateFrom !== '' || filters.dateTo !== '') {
+            $clearDateButton.show();
+        } else {
+            $clearDateButton.hide();
+        }
+    }
+    
+    function updateClearSearchButton() {
+        const searchValue = $('#sardius-search').val();
+        if (searchValue !== '') {
+            $clearSearchButton.show();
+            $('#sardius-search').addClass('has-clear-button');
+        } else {
+            $clearSearchButton.hide();
+            $('#sardius-search').removeClass('has-clear-button');
+        }
     }
 
     function resetFilters() {
@@ -271,6 +321,11 @@ jQuery(document).ready(function($) {
         // Hide reset button and dropdown
         $resetGroup.hide();
         hideDropdown();
+        
+        // Update clear button visibility
+        updateClearSeriesButton();
+        updateClearDateButton();
+        updateClearSearchButton();
         
         // Update URL parameters
         updateURLParameters();
@@ -486,6 +541,11 @@ jQuery(document).ready(function($) {
         updateURLParameters();
         applyFilters();
     }, 500));
+    
+    // Update clear button visibility immediately when typing
+    $('#sardius-search').on('input', function() {
+        updateClearSearchButton();
+    });
 
     $('#sardius-series-filter').on('change', function() {
         filters.category = $(this).val();
@@ -508,6 +568,69 @@ jQuery(document).ready(function($) {
 
     $('#reset-filters').on('click', function() {
         resetFilters();
+    });
+    
+    // Clear series button event handler
+    $clearSeriesButton.on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Clear the series filter
+        filters.category = '';
+        $seriesInput.val('');
+        
+        // Update global filters
+        window.sardiusCurrentFilters = filters;
+        
+        // Update UI
+        checkFiltersActive();
+        hideDropdown();
+        
+        // Update URL and apply filters
+        updateURLParameters();
+        applyFilters();
+    });
+    
+    // Clear date range button event handler
+    $clearDateButton.on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Clear the date range filters
+        filters.dateFrom = '';
+        filters.dateTo = '';
+        $('#sardius-date-from').val('');
+        $('#sardius-date-to').val('');
+        
+        // Update global filters
+        window.sardiusCurrentFilters = filters;
+        
+        // Update UI
+        checkFiltersActive();
+        
+        // Update URL and apply filters
+        updateURLParameters();
+        applyFilters();
+    });
+    
+    // Clear search button event handler
+    $clearSearchButton.on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Clear the search filter
+        filters.search = '';
+        $('#sardius-search').val('');
+        
+        // Update global filters
+        window.sardiusCurrentFilters = filters;
+        
+        // Update UI
+        checkFiltersActive();
+        
+        // Update URL and apply filters
+        updateURLParameters();
+        applyFilters();
     });
 
     function debounce(func, wait) {
@@ -696,6 +819,15 @@ jQuery(document).ready(function($) {
     // Load filters from URL parameters on page load
     const filtersLoadedFromURL = loadFiltersFromURL();
     
+    // Initialize clear series button visibility
+    updateClearSeriesButton();
+    
+    // Initialize clear date button visibility
+    updateClearDateButton();
+    
+    // Initialize clear search button visibility
+    updateClearSearchButton();
+    
     // Check if we need to apply filters on initial load
     const hasActiveFilters = filters.search !== '' || 
                             filters.category !== '' || 
@@ -767,9 +899,16 @@ jQuery(document).ready(function($) {
         
         // Handle clicks outside to close calendar
         $(document).on('click', function(e) {
-            if (!$(e.target).closest('input[type="date"]').length && calendarOpen) {
+            if (!$(e.target).closest('.date-range-input').length && calendarOpen) {
                 calendarOpen = false;
                 activeInput = null;
+            }
+        });
+        
+        // Handle clicks on the date range container to focus the first input
+        $('.date-range-input').on('click', function(e) {
+            if (!$(e.target).is('input[type="date"]')) {
+                $('#sardius-date-from').focus();
             }
         });
     }
