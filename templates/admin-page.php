@@ -298,7 +298,7 @@ if ($feed_data) {
 
 <div id="loading-overlay" class="loading-overlay" style="display: none;">
     <div class="loading-spinner">
-        <span class="dashicons dashicons-update"></span>
+        <div class="css-spinner"></div>
         <p><?php _e('Loading...', 'sardius-feed'); ?></p>
     </div>
 </div> 
