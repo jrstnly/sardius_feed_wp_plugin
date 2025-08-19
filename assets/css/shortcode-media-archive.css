@@ -8,14 +8,118 @@
     font-family: "proxima-nova", sans-serif;
 }
 
-#sardius-filters {
+/* Left Panel Layout */
+.sardius-left-panel {
     flex: 0 0 300px;
     max-width: 300px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Watch Grace Live Section */
+.watch-grace-live-section {
     background-color: #f8f9fa;
     padding: 1.5rem;
-    margin-right: 2rem;
+    color: #333;
+    border: 1px solid #e0e0e0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.watch-grace-live-section h2 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 0 0 1rem 0;
+    color: #333;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.live-schedule {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem;
+    background-color: #fff;
+    border: 1px solid #ddd;
+}
+
+.schedule-icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: #007cba;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.schedule-text {
+    flex: 1;
+}
+
+.schedule-days {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+    color: #333;
+}
+
+.schedule-times {
+    font-size: 0.875rem;
+    font-weight: 700;
+    margin: 0;
+    color: #007cba;
+}
+
+.watch-now-button-large {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background-color: var(--e-global-color-primary, #007cba);
+    color: #fff;
+    text-decoration: none;
+    border: none;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: background-color 0.2s ease;
+}
+
+.watch-now-button-large:hover {
+    background-color: var(--e-global-color-primary, #007cba);
+    filter: brightness(0.9);
+    color: #fff;
+}
+
+.button-text {
+    font-weight: 600;
+}
+
+.button-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+}
+
+#sardius-filters {
+    background-color: #f8f9fa;
+    padding: 1.5rem;
+    border: 1px solid #e0e0e0;
     height: fit-content;
     align-self: flex-start;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 #sardius-media-grid {
@@ -208,7 +312,6 @@
     padding: 0;
     border: none;
     background-color: #e0e0e0;
-    border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -325,7 +428,6 @@
     padding: 0;
     border: none;
     background-color: #e0e0e0;
-    border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -357,7 +459,6 @@
     width: 100%;
     padding: 0.75rem 1rem;
     border: none;
-    border-radius: 4px;
     cursor: pointer;
     font-weight: 600;
     font-size: 0.875rem;
@@ -432,7 +533,6 @@
     padding: 0;
     border: none;
     background-color: #e0e0e0;
-    border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -469,7 +569,6 @@
     padding: 0;
     border: none;
     background-color: #e0e0e0;
-    border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -604,5 +703,76 @@
     .sardius-frontend-pagination .current-page {
         padding: 0.4rem 0.6rem;
         font-size: 0.8rem;
+    }
+}
+
+/* Responsive Layout */
+@media (max-width: 1024px) {
+    .sardius-media-archive-container {
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    
+    .sardius-left-panel {
+        flex: none;
+        max-width: 100%;
+        order: 1;
+    }
+    
+    .watch-grace-live-section {
+        margin-bottom: 1rem;
+    }
+    
+    #sardius-filters {
+        order: 2;
+    }
+    
+    #sardius-media-grid {
+        order: 3;
+        flex: none;
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .sardius-media-archive-container {
+        padding: 1rem;
+        gap: 1rem;
+    }
+    
+    .watch-grace-live-section {
+        padding: 1.25rem;
+    }
+    
+    .watch-grace-live-section h2 {
+        font-size: 1.1rem;
+    }
+    
+    .live-schedule {
+        padding: 0.75rem;
+        gap: 0.5rem;
+    }
+    
+    .schedule-icon {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .schedule-times {
+        font-size: 0.9rem;
+    }
+    
+    .watch-now-button-large {
+        padding: 0.875rem;
+        font-size: 0.9rem;
+    }
+    
+    #sardius-filters {
+        padding: 1.25rem;
+    }
+    
+    #sardius-media-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1rem;
     }
 }
