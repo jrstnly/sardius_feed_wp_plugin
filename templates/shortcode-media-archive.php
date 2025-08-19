@@ -36,12 +36,13 @@ $frontend_nonce = wp_create_nonce('sardius_frontend_nonce');
                 <div class="live-schedule">
                     <div class="schedule-icon">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor"/>
+                            <circle cx="12" cy="12" r="10" stroke="var(--e-global-color-accent)" stroke-width="2" fill="none"/>
+                            <path d="M9 12l2 2 4-4" stroke="var(--e-global-color-accent)" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                     </div>
                     <div class="schedule-text">
                         <p class="schedule-days"><?php _e('SUNDAYS', 'sardius-feed'); ?></p>
-                        <p class="schedule-times"><?php _e('9:00A & 10:40A CT', 'sardius-feed'); ?></p>
+                        <p class="schedule-times" style="color: var(--e-global-color-accent);"><?php _e('9:00A & 10:40A CT', 'sardius-feed'); ?></p>
                     </div>
                 </div>
                 <a href="https://grace.live" target="_blank" rel="noopener noreferrer" class="watch-now-button-large">
