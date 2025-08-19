@@ -119,7 +119,13 @@ $frontend_nonce = wp_create_nonce('sardius_frontend_nonce');
                                     }
                                 }
                             }
-                            sort($all_speakers);
+                            
+                            // Sort speakers with Troy Dobbs always at the top
+                            usort($all_speakers, function($a, $b) {
+                                if ($a === 'Troy Dobbs') return -1;
+                                if ($b === 'Troy Dobbs') return 1;
+                                return strcasecmp($a, $b);
+                            });
                         }
                         foreach ($all_speakers as $speaker) : ?>
                             <div class="autocomplete-item" data-value="<?php echo esc_attr($speaker); ?>"><?php echo esc_html($speaker); ?></div>
