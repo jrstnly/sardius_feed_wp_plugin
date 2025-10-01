@@ -26,6 +26,11 @@ foreach ($feed_data['hits'] as $hit) {
 ?>
 
 <div class="sardius-media-search">
+    <?php 
+    // Include the latest service banner
+    include SARDIUS_FEED_PLUGIN_PATH . 'templates/latest-service-banner.php';
+    ?>
+    
     <div class="search-filters">
         <?php if ($show_search === 'true'): ?>
             <div class="filter-group">

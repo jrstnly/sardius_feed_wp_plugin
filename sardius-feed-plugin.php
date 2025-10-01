@@ -105,6 +105,7 @@ class SardiusFeedPlugin {
         wp_enqueue_style('sardius-feed-shortcode-media-player', SARDIUS_FEED_PLUGIN_URL . 'assets/css/shortcode-media-player.css', array(), SARDIUS_FEED_VERSION);
         wp_enqueue_style('sardius-feed-shortcode-media-search', SARDIUS_FEED_PLUGIN_URL . 'assets/css/shortcode-media-search.css', array(), SARDIUS_FEED_VERSION);
         wp_enqueue_style('sardius-feed-shortcode-media-archive', SARDIUS_FEED_PLUGIN_URL . 'assets/css/shortcode-media-archive.css', array(), SARDIUS_FEED_VERSION);
+        wp_enqueue_style('sardius-feed-latest-service-banner', SARDIUS_FEED_PLUGIN_URL . 'assets/css/latest-service-banner.css', array(), SARDIUS_FEED_VERSION);
         wp_enqueue_script('sardius-feed-frontend', SARDIUS_FEED_PLUGIN_URL . 'assets/js/frontend.js', array('jquery'), SARDIUS_FEED_VERSION, true);
         wp_localize_script('sardius-feed-frontend', 'sardius_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
@@ -165,6 +166,7 @@ class SardiusFeedPlugin {
     public function register_settings() {
         register_setting('sardius_feed_settings', 'sardius_account_id');
         register_setting('sardius_feed_settings', 'sardius_feed_id');
+        register_setting('sardius_feed_settings', 'sardius_services_feed_id');
         register_setting('sardius_feed_settings', 'sardius_media_slug');
         register_setting('sardius_feed_settings', 'sardius_elementor_template_id');
         register_setting('sardius_feed_settings', 'sardius_max_items');
@@ -192,6 +194,14 @@ class SardiusFeedPlugin {
             'sardius_feed_id',
             __('Feed ID', 'sardius-feed'),
             array($this, 'feed_id_field_callback'),
+            'sardius-feed',
+            'sardius_feed_api_settings'
+        );
+        
+        add_settings_field(
+            'sardius_services_feed_id',
+            __('Services Feed ID', 'sardius-feed'),
+            array($this, 'services_feed_id_field_callback'),
             'sardius-feed',
             'sardius_feed_api_settings'
         );
@@ -267,6 +277,12 @@ class SardiusFeedPlugin {
         $value = get_option('sardius_feed_id', '');
         echo '<input type="text" id="sardius_feed_id" name="sardius_feed_id" value="' . esc_attr($value) . '" class="regular-text" />';
         echo '<p class="description">' . __('Enter your Sardius Media Feed ID.', 'sardius-feed') . '</p>';
+    }
+    
+    public function services_feed_id_field_callback() {
+        $value = get_option('sardius_services_feed_id', '');
+        echo '<input type="text" id="sardius_services_feed_id" name="sardius_services_feed_id" value="' . esc_attr($value) . '" class="regular-text" />';
+        echo '<p class="description">' . __('Enter your Sardius Media Services Feed ID for full service videos.', 'sardius-feed') . '</p>';
     }
     
 
@@ -359,6 +375,37 @@ class SardiusFeedPlugin {
         }
         
         return $this->feed_data;
+    }
+    
+    public function get_latest_service() {
+        $services_data = $this->get_services_feed_data();
+        if (!$services_data || empty($services_data['hits'])) {
+            return null;
+        }
+        
+        // Sort by air date descending to get the latest
+        $services = $services_data['hits'];
+        usort($services, function($a, $b) {
+            return strtotime($b['airDate']) - strtotime($a['airDate']);
+        });
+        
+        return $services[0] ?? null;
+    }
+    
+    public function get_services_feed_data() {
+        $cached_data = get_option('sardius_services_feed_cache');
+        $last_update = get_option('sardius_services_feed_last_update');
+        
+        if ($cached_data && (time() - $last_update) < $this->cache_duration) {
+            return json_decode($cached_data, true);
+        } else {
+            $services_data = $this->fetch_services_feed_data();
+            if ($services_data) {
+                update_option('sardius_services_feed_cache', json_encode($services_data));
+                update_option('sardius_services_feed_last_update', time());
+            }
+            return $services_data;
+        }
     }
     
     public function get_paginated_feed_data($page = 1, $items_per_page = null) {
@@ -469,6 +516,83 @@ class SardiusFeedPlugin {
         );
     }
     
+    private function fetch_services_feed_data() {
+        $account_id = get_option('sardius_account_id', '');
+        $services_feed_id = get_option('sardius_services_feed_id', '');
+        
+        if (empty($account_id) || empty($services_feed_id)) {
+            error_log('Sardius Feed Plugin: Account ID or Services Feed ID not configured');
+            return false;
+        }
+        
+        $all_hits = array();
+        $page = 1;
+        $count = 100; // Maximum items per page
+        $total_fetched = 0;
+        $max_items = 50; // Limit services to 50 items
+        
+        do {
+            $api_url = 'https://api.sardius.media/feeds/' . $account_id . '/' . $services_feed_id . '/public?count=' . $count . '&page=' . $page;
+            
+            $response = wp_remote_get($api_url, array(
+                'timeout' => 30,
+                'headers' => array(
+                    'User-Agent' => 'WordPress/SardiusFeedPlugin'
+                )
+            ));
+            
+            if (is_wp_error($response)) {
+                error_log('Sardius Feed Plugin: Failed to fetch services feed data page ' . $page . ' - ' . $response->get_error_message());
+                break;
+            }
+            
+            $body = wp_remote_retrieve_body($response);
+            $data = json_decode($body, true);
+            
+            if (!$data || !isset($data['hits'])) {
+                error_log('Sardius Feed Plugin: Invalid services feed data received for page ' . $page);
+                break;
+            }
+            
+            // Add hits from this page
+            $all_hits = array_merge($all_hits, $data['hits']);
+            $total_fetched += count($data['hits']);
+            
+            // Check if we've reached the maximum items limit
+            if ($total_fetched >= $max_items) {
+                // Trim to exact limit
+                $all_hits = array_slice($all_hits, 0, $max_items);
+                break;
+            }
+            
+            // Check if there are more pages
+            $total_items = $data['total'] ?? 0;
+            if ($total_fetched >= $total_items) {
+                break; // No more items to fetch
+            }
+            
+            $page++;
+            
+            // Safety check to prevent infinite loops
+            if ($page > 10) {
+                error_log('Sardius Feed Plugin: Safety limit reached while fetching services pages');
+                break;
+            }
+            
+        } while (true);
+        
+        if (empty($all_hits)) {
+            error_log('Sardius Feed Plugin: No services items fetched from API');
+            return false;
+        }
+        
+        // Return data in the same format as before
+        return array(
+            'total' => count($all_hits),
+            'hits' => $all_hits
+        );
+    }
+    
     public function handle_virtual_pages() {
         // Render virtual single page when our media slug is present
         $media_slug = get_query_var('media_slug');
@@ -479,7 +603,9 @@ class SardiusFeedPlugin {
     
     private function render_virtual_page($media_slug) {
         $feed_data = $this->get_feed_data();
-        if (!$feed_data) {
+        $services_data = $this->get_services_feed_data();
+        
+        if (!$feed_data && !$services_data) {
             wp_die(__('Unable to load media data', 'sardius-feed'));
         }
         
@@ -490,12 +616,26 @@ class SardiusFeedPlugin {
         $slug_parts = explode('-', $slug);
         $pid = $slug_parts[0] ?? '';
         
-        // Find the media item by PID
+        // Find the media item by PID in both feeds
         $media_item = null;
-        foreach ($feed_data['hits'] as $hit) {
-            if (($hit['pid'] ?? '') === $pid) {
-                $media_item = $hit;
-                break;
+        
+        // First, search in the main feed
+        if ($feed_data) {
+            foreach ($feed_data['hits'] as $hit) {
+                if (($hit['pid'] ?? '') === $pid) {
+                    $media_item = $hit;
+                    break;
+                }
+            }
+        }
+        
+        // If not found in main feed, search in services feed
+        if (!$media_item && $services_data) {
+            foreach ($services_data['hits'] as $hit) {
+                if (($hit['pid'] ?? '') === $pid) {
+                    $media_item = $hit;
+                    break;
+                }
             }
         }
         
@@ -594,12 +734,16 @@ class SardiusFeedPlugin {
         // Clear cache and fetch new data
         delete_option('sardius_feed_cache');
         delete_option('sardius_feed_last_update');
+        delete_option('sardius_services_feed_cache');
+        delete_option('sardius_services_feed_last_update');
         
         $feed_data = $this->get_feed_data();
+        $services_data = $this->get_services_feed_data();
         
         if ($feed_data) {
+            $services_count = $services_data ? count($services_data['hits']) : 0;
             wp_send_json_success(array(
-                'message' => sprintf(__('Feed refreshed successfully. Found %d items.', 'sardius-feed'), count($feed_data['hits']))
+                'message' => sprintf(__('Feed refreshed successfully. Found %d items and %d services.', 'sardius-feed'), count($feed_data['hits']), $services_count)
             ));
         } else {
             wp_send_json_error(array(
@@ -1160,20 +1304,37 @@ class SardiusFeedPlugin {
     
     public function generate_sitemap() {
         $feed_data = $this->get_feed_data();
-        if (!$feed_data) {
+        $services_data = $this->get_services_feed_data();
+        
+        if (!$feed_data && !$services_data) {
             return '';
         }
         
         $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
         
-        foreach ($feed_data['hits'] as $item) {
-            $xml .= '  <url>' . "\n";
-            $xml .= '    <loc>' . esc_url($this->get_media_url($item)) . '</loc>' . "\n";
-            $xml .= '    <lastmod>' . date('Y-m-d', strtotime($item['airDate'])) . '</lastmod>' . "\n";
-            $xml .= '    <changefreq>weekly</changefreq>' . "\n";
-            $xml .= '    <priority>0.8</priority>' . "\n";
-            $xml .= '  </url>' . "\n";
+        // Add items from main feed
+        if ($feed_data) {
+            foreach ($feed_data['hits'] as $item) {
+                $xml .= '  <url>' . "\n";
+                $xml .= '    <loc>' . esc_url($this->get_media_url($item)) . '</loc>' . "\n";
+                $xml .= '    <lastmod>' . date('Y-m-d', strtotime($item['airDate'])) . '</lastmod>' . "\n";
+                $xml .= '    <changefreq>weekly</changefreq>' . "\n";
+                $xml .= '    <priority>0.8</priority>' . "\n";
+                $xml .= '  </url>' . "\n";
+            }
+        }
+        
+        // Add items from services feed
+        if ($services_data) {
+            foreach ($services_data['hits'] as $item) {
+                $xml .= '  <url>' . "\n";
+                $xml .= '    <loc>' . esc_url($this->get_media_url($item)) . '</loc>' . "\n";
+                $xml .= '    <lastmod>' . date('Y-m-d', strtotime($item['airDate'])) . '</lastmod>' . "\n";
+                $xml .= '    <changefreq>weekly</changefreq>' . "\n";
+                $xml .= '    <priority>0.8</priority>' . "\n";
+                $xml .= '  </url>' . "\n";
+            }
         }
         
         $xml .= '</urlset>';

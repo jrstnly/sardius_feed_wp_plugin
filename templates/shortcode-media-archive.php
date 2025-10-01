@@ -45,6 +45,11 @@ $frontend_nonce = wp_create_nonce('sardius_frontend_nonce');
         echo '</div>';
     }
     ?>
+    
+    <?php 
+    // Include the latest service banner below the image banner
+    include SARDIUS_FEED_PLUGIN_PATH . 'templates/latest-service-banner.php';
+    ?>
     <div class="sardius-left-panel">
         <!-- Watch Grace Live Section -->
         <div class="watch-grace-live-section">

@@ -39,6 +39,10 @@ $items = array_slice($items, 0, $limit);
 ?>
 
 <div class="sardius-media-list">
+    <?php 
+    // Include the latest service banner
+    include SARDIUS_FEED_PLUGIN_PATH . 'templates/latest-service-banner.php';
+    ?>
     <?php foreach ($items as $item): ?>
         <div class="media-list-item">
             <?php if ($show_thumbnails === 'true' && !empty($item['files']) && !empty($item['files'][0]['url'])): ?>

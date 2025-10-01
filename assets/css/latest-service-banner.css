@@ -1,0 +1,196 @@
+/* Latest Service Banner Styles */
+
+.sardius-latest-service-banner {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: "proxima-nova", sans-serif;
+}
+
+.banner-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.banner-thumbnail {
+    position: relative;
+    flex-shrink: 0;
+    width: 200px;
+    height: 112.5px; /* 16:9 aspect ratio (200 / 16 * 9) */
+    background: #f5f5f5;
+    overflow: hidden;
+}
+
+.banner-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+.banner-thumbnail .no-thumbnail {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #999;
+}
+
+.banner-thumbnail .no-thumbnail .dashicons {
+    font-size: 36px;
+}
+
+.service-duration {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 3px 6px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.banner-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.banner-title {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--e-global-color-accent);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.service-title {
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    line-height: 1.3;
+    font-weight: 600;
+}
+
+.service-title a {
+    color: #333;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.service-title a:hover {
+    color: var(--e-global-color-accent);
+}
+
+.service-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 13px;
+    color: #666;
+}
+
+.service-date {
+    color: var(--e-global-color-accent);
+    font-weight: 500;
+}
+
+.service-duration-text {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.banner-action {
+    flex-shrink: 0;
+}
+
+/* Watch Now Button - matches Grace Live section styling */
+.watch-now-button-large {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background-color: var(--e-global-color-primary, #007cba);
+    color: #fff;
+    text-decoration: none;
+    border: none;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: background-color 0.2s ease;
+}
+
+.watch-now-button-large:hover {
+    background-color: var(--e-global-color-primary, #007cba);
+    filter: brightness(0.9);
+    color: #fff;
+}
+
+.button-text {
+    font-weight: 600;
+}
+
+.button-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .sardius-latest-service-banner {
+        margin-bottom: 20px;
+    }
+    
+    .banner-content {
+        margin: 0 15px;
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+        padding: 15px;
+    }
+    
+    .banner-thumbnail {
+        width: 100%;
+        max-width: 300px;
+        height: 168.75px; /* 16:9 aspect ratio (300 / 16 * 9) */
+    }
+    
+    .banner-info {
+        order: 2;
+    }
+    
+    .banner-action {
+        order: 3;
+    }
+    
+    .service-meta {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .banner-thumbnail {
+        height: 168.75px; /* Maintain 16:9 aspect ratio */
+    }
+    
+    .service-title {
+        font-size: 16px;
+    }
+    
+    .watch-now-button-large {
+        padding: 0.875rem;
+        font-size: 0.9rem;
+    }
+}
+

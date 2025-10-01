@@ -35,6 +35,7 @@ if ($feed_data) {
     if (isset($_POST['submit'])) {
         update_option('sardius_account_id', sanitize_text_field($_POST['sardius_account_id']));
         update_option('sardius_feed_id', sanitize_text_field($_POST['sardius_feed_id']));
+        update_option('sardius_services_feed_id', sanitize_text_field($_POST['sardius_services_feed_id']));
         if (isset($_POST['sardius_media_slug'])) {
             update_option('sardius_media_slug', sanitize_text_field($_POST['sardius_media_slug']));
             if (function_exists('flush_rewrite_rules')) {
@@ -65,6 +66,7 @@ if ($feed_data) {
     
     $account_id = get_option('sardius_account_id', '');
     $feed_id = get_option('sardius_feed_id', '');
+    $services_feed_id = get_option('sardius_services_feed_id', '');
     $media_slug = get_option('sardius_media_slug', 'sardius-media');
     $plugin_instance = new SardiusFeedPlugin();
     $custom_template = get_option('sardius_media_template', '');
@@ -95,6 +97,16 @@ if ($feed_data) {
                         <input type="text" id="sardius_feed_id" name="sardius_feed_id" 
                                value="<?php echo esc_attr($feed_id); ?>" class="regular-text" />
                         <p class="description"><?php _e('Enter your Sardius Media Feed ID.', 'sardius-feed'); ?></p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="sardius_services_feed_id"><?php _e('Services Feed ID', 'sardius-feed'); ?></label>
+                    </th>
+                    <td>
+                        <input type="text" id="sardius_services_feed_id" name="sardius_services_feed_id" 
+                               value="<?php echo esc_attr($services_feed_id); ?>" class="regular-text" />
+                        <p class="description"><?php _e('Enter your Sardius Media Services Feed ID for full service videos.', 'sardius-feed'); ?></p>
                     </td>
                 </tr>
                 <tr>
