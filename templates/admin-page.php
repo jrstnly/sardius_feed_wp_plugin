@@ -54,6 +54,12 @@ if ($feed_data) {
         if (isset($_POST['sardius_admin_items_per_page'])) {
             update_option('sardius_admin_items_per_page', intval($_POST['sardius_admin_items_per_page']));
         }
+        if (isset($_POST['sardius_archive_banner_image'])) {
+            update_option('sardius_archive_banner_image', esc_url_raw($_POST['sardius_archive_banner_image']));
+        }
+        if (isset($_POST['sardius_archive_banner_link'])) {
+            update_option('sardius_archive_banner_link', esc_url_raw($_POST['sardius_archive_banner_link']));
+        }
         echo '<div class="notice notice-success"><p>' . __('Settings saved successfully!', 'sardius-feed') . '</p></div>';
     }
     
@@ -158,6 +164,46 @@ if ($feed_data) {
                 </tr>
             </table>
             <?php submit_button(__('Save Pagination Settings', 'sardius-feed')); ?>
+        </form>
+    </div>
+    
+    <div class="sardius-feed-settings">
+        <h2><?php _e('Archive Banner Settings', 'sardius-feed'); ?></h2>
+        <form method="post" action="">
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="sardius_archive_banner_image"><?php _e('Banner Image', 'sardius-feed'); ?></label>
+                    </th>
+                    <td>
+                        <input type="text" id="sardius_archive_banner_image" name="sardius_archive_banner_image" 
+                               value="<?php echo esc_attr(get_option('sardius_archive_banner_image', '')); ?>" 
+                               class="regular-text" />
+                        <button type="button" id="upload_banner_image" class="button"><?php _e('Choose Image', 'sardius-feed'); ?></button>
+                        <div id="banner_image_preview" style="margin-top: 10px;">
+                            <?php 
+                            $banner_image = get_option('sardius_archive_banner_image', '');
+                            if ($banner_image) {
+                                echo '<img src="' . esc_url($banner_image) . '" style="max-width: 200px; height: auto;" />';
+                            }
+                            ?>
+                        </div>
+                        <p class="description"><?php _e('Upload or select an image for the archive banner.', 'sardius-feed'); ?></p>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">
+                        <label for="sardius_archive_banner_link"><?php _e('Banner Link URL', 'sardius-feed'); ?></label>
+                    </th>
+                    <td>
+                        <input type="url" id="sardius_archive_banner_link" name="sardius_archive_banner_link" 
+                               value="<?php echo esc_attr(get_option('sardius_archive_banner_link', '')); ?>" 
+                               class="regular-text" />
+                        <p class="description"><?php _e('Enter the URL where the banner should link to (optional).', 'sardius-feed'); ?></p>
+                    </td>
+                </tr>
+            </table>
+            <?php submit_button(__('Save Banner Settings', 'sardius-feed')); ?>
         </form>
     </div>
     

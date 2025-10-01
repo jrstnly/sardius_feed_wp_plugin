@@ -76,4 +76,42 @@ jQuery(document).ready(function($) {
         .prop('type', 'text/css')
         .html('.spinning { animation: spin 1s linear infinite; }')
         .appendTo('head');
+    
+    // Banner image upload functionality
+    $('#upload_banner_image').on('click', function(e) {
+        e.preventDefault();
+        
+        console.log('Button clicked!');
+        
+        // Wait for wp.media to be available
+        if (typeof wp === 'undefined' || !wp.media) {
+            console.log('wp.media not available, waiting...');
+            setTimeout(function() {
+                $('#upload_banner_image').click();
+            }, 1000);
+            return;
+        }
+        
+        console.log('Opening media uploader...');
+        
+        var imageUploader = wp.media({
+            title: 'Select Banner Image',
+            button: {
+                text: 'Use this image'
+            },
+            multiple: false,
+            library: {
+                type: 'image'
+            }
+        });
+        
+        imageUploader.on('select', function() {
+            var attachment = imageUploader.state().get('selection').first().toJSON();
+            console.log('Selected image:', attachment);
+            $('#sardius_archive_banner_image').val(attachment.url);
+            $('#banner_image_preview').html('<img src="' + attachment.url + '" style="max-width: 200px; height: auto;" />');
+        });
+        
+        imageUploader.open();
+    });
 }); 

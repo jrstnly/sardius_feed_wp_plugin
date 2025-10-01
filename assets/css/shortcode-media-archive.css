@@ -8,6 +8,30 @@
     font-family: "proxima-nova", sans-serif;
 }
 
+/* Archive Banner Styles */
+.sardius-archive-banner {
+    width: 100%;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.sardius-archive-banner img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+.sardius-archive-banner a {
+    display: block;
+    text-decoration: none;
+    transition: opacity 0.2s ease;
+}
+
+.sardius-archive-banner a:hover {
+    opacity: 0.9;
+}
+
 /* Left Panel Layout */
 .sardius-left-panel {
     flex: 0 0 300px;
@@ -729,12 +753,20 @@
         flex: none;
         width: 100%;
     }
+    
+    .sardius-archive-banner {
+        margin-bottom: 1.5rem;
+    }
 }
 
 @media (max-width: 768px) {
     .sardius-media-archive-container {
         padding: 1rem;
         gap: 1rem;
+    }
+    
+    .sardius-archive-banner {
+        margin-bottom: 1rem;
     }
     
     .watch-grace-live-section {
