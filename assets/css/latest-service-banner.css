@@ -12,8 +12,8 @@
     align-items: center;
     gap: 20px;
     padding: 20px;
-    background: #f8f9fa;
-    border: 1px solid #ddd;
+    background: var(--e-global-color-primary, #007cba);
+    border: 1px solid var(--e-global-color-primary, #007cba);
     max-width: 1200px;
     margin: 0 auto;
 }
@@ -24,6 +24,7 @@
     width: 200px;
     height: 112.5px; /* 16:9 aspect ratio (200 / 16 * 9) */
     background: #f5f5f5;
+    border: 4px solid #fff;
     overflow: hidden;
 }
 
@@ -81,7 +82,7 @@
     margin: 0 0 8px 0;
     font-size: 14px;
     font-weight: 600;
-    color: var(--e-global-color-accent);
+    color: #fff;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -94,29 +95,30 @@
 }
 
 .service-title a {
-    color: #333;
+    color: #fff;
     text-decoration: none;
     transition: color 0.2s;
 }
 
 .service-title a:hover {
-    color: var(--e-global-color-accent);
+    color: #fff;
+    opacity: 0.8;
 }
 
 .service-meta {
     display: flex;
     gap: 15px;
     font-size: 13px;
-    color: #666;
+    color: #fff;
 }
 
 .service-date {
-    color: var(--e-global-color-accent);
+    color: #fff;
     font-weight: 500;
 }
 
 .service-duration-text {
-    color: #6c757d;
+    color: #fff;
     font-weight: 500;
 }
 
@@ -124,29 +126,29 @@
     flex-shrink: 0;
 }
 
-/* Watch Now Button - matches Grace Live section styling */
-.watch-now-button-large {
+/* Watch Now Button - transparent with white border (for banner) */
+.sardius-latest-service-banner .watch-now-button-large {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
     width: 100%;
     padding: 0.75rem 1rem;
-    background-color: var(--e-global-color-primary, #007cba);
+    background-color: transparent;
     color: #fff;
     text-decoration: none;
-    border: none;
+    border: 4px solid #fff;
     font-weight: 600;
     font-size: 0.875rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    transition: background-color 0.2s ease;
+    transition: all 0.2s ease;
 }
 
-.watch-now-button-large:hover {
-    background-color: var(--e-global-color-primary, #007cba);
-    filter: brightness(0.9);
-    color: #fff;
+.sardius-latest-service-banner .watch-now-button-large:hover {
+    background-color: #fff;
+    color: var(--e-global-color-primary, #007cba);
+    border-color: #fff;
 }
 
 .button-text {
@@ -203,7 +205,7 @@
         font-size: 16px;
     }
     
-    .watch-now-button-large {
+    .sardius-latest-service-banner .watch-now-button-large {
         padding: 0.875rem;
         font-size: 0.9rem;
     }
