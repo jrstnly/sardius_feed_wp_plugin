@@ -22,7 +22,7 @@ $service_thumbnail = !empty($latest_service['files'][0]['url']) ? $latest_servic
 <div class="sardius-latest-service-banner">
     <div class="banner-content">
         <div class="banner-thumbnail">
-            <a href="<?php echo esc_url($service_url); ?>" target="_blank" rel="noopener">
+            <a href="<?php echo esc_url($service_url); ?>">
                 <?php if ($service_thumbnail): ?>
                     <img src="<?php echo esc_url($service_thumbnail); ?>" 
                          alt="<?php echo esc_attr($service_title); ?>" 
@@ -50,7 +50,7 @@ $service_thumbnail = !empty($latest_service['files'][0]['url']) ? $latest_servic
         </div>
         
         <div class="banner-action">
-            <a href="<?php echo esc_url($service_url); ?>" class="watch-now-button-large" target="_blank" rel="noopener">
+            <a href="<?php echo esc_url($service_url); ?>" class="watch-now-button-large">
                 <span class="button-text">Watch Now</span>
                 <span class="button-icon">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
