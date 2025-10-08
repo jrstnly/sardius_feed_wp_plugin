@@ -28,27 +28,14 @@ $frontend_nonce = wp_create_nonce('sardius_frontend_nonce');
 ?>
 
 <div class="sardius-media-archive-container">
-    <?php
-    // Display banner if configured
-    $banner_image = get_option('sardius_archive_banner_image', '');
-    $banner_link = get_option('sardius_archive_banner_link', '');
-    
-    if (!empty($banner_image)) {
-        echo '<div class="sardius-archive-banner">';
-        if (!empty($banner_link)) {
-            echo '<a href="' . esc_url($banner_link) . '" target="_blank" rel="noopener noreferrer">';
-        }
-        echo '<img src="' . esc_url($banner_image) . '" alt="Archive Banner" />';
-        if (!empty($banner_link)) {
-            echo '</a>';
-        }
-        echo '</div>';
-    }
+    <?php 
+    // Include the latest service banner first
+    include SARDIUS_FEED_PLUGIN_PATH . 'templates/latest-service-banner.php';
     ?>
     
     <?php 
-    // Include the latest service banner below the image banner
-    include SARDIUS_FEED_PLUGIN_PATH . 'templates/latest-service-banner.php';
+    // Include the watch more banner below the latest service banner
+    include SARDIUS_FEED_PLUGIN_PATH . 'templates/watch-more-banner.php';
     ?>
     <div class="sardius-left-panel">
         <!-- Watch Grace Live Section -->

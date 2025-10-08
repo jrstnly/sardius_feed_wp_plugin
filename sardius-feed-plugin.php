@@ -106,6 +106,7 @@ class SardiusFeedPlugin {
         wp_enqueue_style('sardius-feed-shortcode-media-search', SARDIUS_FEED_PLUGIN_URL . 'assets/css/shortcode-media-search.css', array(), SARDIUS_FEED_VERSION);
         wp_enqueue_style('sardius-feed-shortcode-media-archive', SARDIUS_FEED_PLUGIN_URL . 'assets/css/shortcode-media-archive.css', array(), SARDIUS_FEED_VERSION);
         wp_enqueue_style('sardius-feed-latest-service-banner', SARDIUS_FEED_PLUGIN_URL . 'assets/css/latest-service-banner.css', array(), SARDIUS_FEED_VERSION);
+        wp_enqueue_style('sardius-feed-watch-more-banner', SARDIUS_FEED_PLUGIN_URL . 'assets/css/watch-more-banner.css', array(), SARDIUS_FEED_VERSION);
         wp_enqueue_script('sardius-feed-frontend', SARDIUS_FEED_PLUGIN_URL . 'assets/js/frontend.js', array('jquery'), SARDIUS_FEED_VERSION, true);
         wp_localize_script('sardius-feed-frontend', 'sardius_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),

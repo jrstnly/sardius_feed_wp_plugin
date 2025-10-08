@@ -14,6 +14,7 @@
     padding: 20px;
     background: var(--e-global-color-primary, #007cba);
     border: 1px solid var(--e-global-color-primary, #007cba);
+    border-left: 8px solid #40b4e2;
     max-width: 1200px;
     margin: 0 auto;
 }
@@ -126,7 +127,7 @@
     flex-shrink: 0;
 }
 
-/* Watch Now Button - transparent with white border (for banner) */
+/* Watch Now Button - accent color background (for banner) */
 .sardius-latest-service-banner .watch-now-button-large {
     display: flex;
     align-items: center;
@@ -134,10 +135,10 @@
     gap: 0.5rem;
     width: 100%;
     padding: 0.75rem 1rem;
-    background-color: transparent;
+    background-color: var(--e-global-color-accent);
     color: #fff;
     text-decoration: none;
-    border: 4px solid #fff;
+    border: none;
     font-weight: 600;
     font-size: 0.875rem;
     text-transform: uppercase;
@@ -146,9 +147,9 @@
 }
 
 .sardius-latest-service-banner .watch-now-button-large:hover {
-    background-color: #fff;
-    color: var(--e-global-color-primary, #007cba);
-    border-color: #fff;
+    background-color: var(--e-global-color-accent);
+    filter: brightness(0.9);
+    color: #fff;
 }
 
 .button-text {
@@ -170,11 +171,13 @@
     }
     
     .banner-content {
-        margin: 0 15px;
+        margin: 0;
         flex-direction: column;
         text-align: center;
         gap: 15px;
         padding: 15px;
+        border-left: 1px solid var(--e-global-color-primary, #007cba);
+        border-top: 8px solid #40b4e2;
     }
     
     .banner-thumbnail {

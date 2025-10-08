@@ -1,0 +1,142 @@
+/* Watch More Banner Styles */
+
+.sardius-watch-more-banner {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: "proxima-nova", sans-serif;
+}
+
+.sardius-watch-more-banner .banner-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+    background: var(--e-global-color-primary, #007cba);
+    border: 1px solid var(--e-global-color-primary, #007cba);
+    border-left: 8px solid #40b4e2;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.sardius-watch-more-banner .banner-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.sardius-watch-more-banner .banner-title {
+    margin: 0 0 8px 0;
+    font-family: "Gotham Pro, Black", Sans-serif;
+    font-weight: 900;
+    font-size: 32px;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sardius-watch-more-banner .banner-subtitle {
+    margin: 0;
+    font-size: 18px;
+    text-transform: uppercase;
+    line-height: 1.3;
+    font-weight: 600;
+    color: #fff;
+}
+
+.sardius-watch-more-banner .banner-description {
+    font-size: 14px;
+    color: #fff;
+    line-height: 1.4;
+}
+
+.sardius-watch-more-banner .banner-action {
+    flex-shrink: 0;
+}
+
+/* Watch More Button - accent color background */
+.sardius-watch-more-banner .watch-more-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background-color: var(--e-global-color-accent);
+    color: #fff;
+    text-decoration: none;
+    border: none;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s ease;
+}
+
+.sardius-watch-more-banner .watch-more-button:hover {
+    background-color: var(--e-global-color-accent);
+    filter: brightness(0.9);
+    color: #fff;
+}
+
+.sardius-watch-more-banner .button-text {
+    font-weight: 600;
+}
+
+.sardius-watch-more-banner .button-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .sardius-watch-more-banner {
+        margin-bottom: 20px;
+    }
+    
+    .sardius-watch-more-banner .banner-content {
+        margin: 0;
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+        padding: 15px;
+        border-left: 1px solid var(--e-global-color-primary, #007cba);
+        border-top: 8px solid #40b4e2;
+    }
+    
+    .sardius-watch-more-banner .banner-thumbnail {
+        width: 100%;
+        max-width: 300px;
+        height: 168.75px; /* 16:9 aspect ratio (300 / 16 * 9) */
+    }
+    
+    .sardius-watch-more-banner .banner-info {
+        order: 2;
+    }
+    
+    .sardius-watch-more-banner .banner-action {
+        order: 3;
+    }
+    
+    .sardius-watch-more-banner .watch-more-button {
+        padding: 0.875rem;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .sardius-watch-more-banner .banner-thumbnail {
+        height: 168.75px; /* Maintain 16:9 aspect ratio */
+    }
+    
+    .sardius-watch-more-banner .banner-subtitle {
+        font-size: 16px;
+    }
+    
+    .sardius-watch-more-banner .watch-more-button {
+        padding: 0.875rem;
+        font-size: 0.9rem;
+    }
+}
