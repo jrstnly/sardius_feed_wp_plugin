@@ -145,23 +145,57 @@
     }
     
     .sardius-media-single .media-title {
-        font-size: 1.4rem;
+        font-size: 1.2rem;
+        line-height: 1.2;
+        margin-bottom: 0.75rem;
+        margin-top: 2rem; /* Add space for the air date */
     }
     
     .sardius-media-single .media-meta {
         flex-direction: column;
-        gap: 0.5rem;
+        gap: 0.4rem;
+        font-size: 0.8rem;
     }
     
-    .sardius-media-single .media-date {
-        position: static;
-        background: transparent;
-        border: none;
-        padding: 4px 0;
+    .sardius-media-single .media-meta .media-date {
+        position: absolute;
+        top: 0.75rem;
+        right: auto;
+        left: 0.75rem;
+        background: #fff;
+        border: 1px solid #e0e0e0;
+        padding: 2px 6px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .sardius-media-single .media-series {
+        font-size: 0.9rem;
+    }
+    
+    .sardius-media-single .media-scripture-container strong {
+        font-size: 0.9rem;
+    }
+    
+    .sardius-media-single .scripture-pills .media-scripture {
+        font-size: 0.75rem;
+        padding: 2px 8px;
     }
     
     .sardius-media-single .media-header,
     .sardius-media-single .media-description {
-        padding: 1rem;
+        padding: 0.75rem;
+    }
+    
+    .sardius-media-single .media-description h3 {
+        font-size: 1rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .sardius-media-single .media-description p {
+        font-size: 0.85rem;
+        line-height: 1.5;
     }
 }
