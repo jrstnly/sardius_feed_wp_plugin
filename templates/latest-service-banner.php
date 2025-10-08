@@ -22,16 +22,18 @@ $service_thumbnail = !empty($latest_service['files'][0]['url']) ? $latest_servic
 <div class="sardius-latest-service-banner">
     <div class="banner-content">
         <div class="banner-thumbnail">
-            <?php if ($service_thumbnail): ?>
-                <img src="<?php echo esc_url($service_thumbnail); ?>" 
-                     alt="<?php echo esc_attr($service_title); ?>" 
-                     loading="lazy">
-            <?php else: ?>
-                <div class="no-thumbnail">
-                    <span class="dashicons dashicons-video-alt3"></span>
-                </div>
-            <?php endif; ?>
-            <div class="service-duration"><?php echo esc_html($service_duration); ?></div>
+            <a href="<?php echo esc_url($service_url); ?>" target="_blank" rel="noopener">
+                <?php if ($service_thumbnail): ?>
+                    <img src="<?php echo esc_url($service_thumbnail); ?>" 
+                         alt="<?php echo esc_attr($service_title); ?>" 
+                         loading="lazy">
+                <?php else: ?>
+                    <div class="no-thumbnail">
+                        <span class="dashicons dashicons-video-alt3"></span>
+                    </div>
+                <?php endif; ?>
+                <div class="service-duration"><?php echo esc_html($service_duration); ?></div>
+            </a>
         </div>
         
         <div class="banner-info">
@@ -48,7 +50,7 @@ $service_thumbnail = !empty($latest_service['files'][0]['url']) ? $latest_servic
         </div>
         
         <div class="banner-action">
-            <a href="<?php echo esc_url($service_url); ?>" class="watch-now-button-large">
+            <a href="<?php echo esc_url($service_url); ?>" class="watch-now-button-large" target="_blank" rel="noopener">
                 <span class="button-text">Watch Now</span>
                 <span class="button-icon">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
