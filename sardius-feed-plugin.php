@@ -465,6 +465,13 @@ class SardiusFeedPlugin {
             return false;
         }
         
+        // Sort by air date descending (newest first)
+        usort($all_hits, function($a, $b) {
+            $date_a = isset($a['airDate']) ? strtotime($a['airDate']) : 0;
+            $date_b = isset($b['airDate']) ? strtotime($b['airDate']) : 0;
+            return $date_b - $date_a; // Descending order (newest first)
+        });
+        
         // Return data in the same format as before
         return array(
             'total' => count($all_hits),
@@ -541,6 +548,13 @@ class SardiusFeedPlugin {
             error_log('Sardius Feed Plugin: No services items fetched from API');
             return false;
         }
+        
+        // Sort by air date descending (newest first)
+        usort($all_hits, function($a, $b) {
+            $date_a = isset($a['airDate']) ? strtotime($a['airDate']) : 0;
+            $date_b = isset($b['airDate']) ? strtotime($b['airDate']) : 0;
+            return $date_b - $date_a; // Descending order (newest first)
+        });
         
         // Return data in the same format as before
         return array(
