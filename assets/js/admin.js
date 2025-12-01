@@ -108,8 +108,7 @@ jQuery(document).ready(function($) {
         imageUploader.on('select', function() {
             var attachment = imageUploader.state().get('selection').first().toJSON();
             console.log('Selected image:', attachment);
-            $('#sardius_archive_banner_image').val(attachment.url);
-            $('#banner_image_preview').html('<img src="' + attachment.url + '" style="max-width: 200px; height: auto;" />');
+            // Archive banner functionality removed
         });
         
         imageUploader.open();

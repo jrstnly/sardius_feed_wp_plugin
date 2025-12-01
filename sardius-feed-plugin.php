@@ -173,8 +173,6 @@ class SardiusFeedPlugin {
         register_setting('sardius_feed_settings', 'sardius_max_items');
         register_setting('sardius_feed_settings', 'sardius_admin_items_per_page');
         register_setting('sardius_feed_settings', 'sardius_frontend_items_per_page');
-        register_setting('sardius_feed_settings', 'sardius_archive_banner_image');
-        register_setting('sardius_feed_settings', 'sardius_archive_banner_link');
         
         add_settings_section(
             'sardius_feed_api_settings',
@@ -240,28 +238,6 @@ class SardiusFeedPlugin {
             'sardius_feed_pagination_settings'
         );
         
-        add_settings_section(
-            'sardius_feed_banner_settings',
-            __('Archive Banner Settings', 'sardius-feed'),
-            array($this, 'banner_section_callback'),
-            'sardius-feed'
-        );
-        
-        add_settings_field(
-            'sardius_archive_banner_image',
-            __('Banner Image', 'sardius-feed'),
-            array($this, 'banner_image_field_callback'),
-            'sardius-feed',
-            'sardius_feed_banner_settings'
-        );
-        
-        add_settings_field(
-            'sardius_archive_banner_link',
-            __('Banner Link URL', 'sardius-feed'),
-            array($this, 'banner_link_field_callback'),
-            'sardius-feed',
-            'sardius_feed_banner_settings'
-        );
     }
     
     public function settings_section_callback() {
@@ -335,27 +311,6 @@ class SardiusFeedPlugin {
         echo '<p class="description">' . __('Number of items to display per page in shortcodes.', 'sardius-feed') . '</p>';
     }
     
-    public function banner_section_callback() {
-        echo '<p>' . __('Configure the banner that appears above the media archive.', 'sardius-feed') . '</p>';
-    }
-    
-    public function banner_image_field_callback() {
-        $value = get_option('sardius_archive_banner_image', '');
-        echo '<input type="text" id="sardius_archive_banner_image" name="sardius_archive_banner_image" value="' . esc_attr($value) . '" class="regular-text" />';
-        echo '<button type="button" id="upload_banner_image" class="button">' . __('Choose Image', 'sardius-feed') . '</button>';
-        echo '<div id="banner_image_preview" style="margin-top: 10px;">';
-        if ($value) {
-            echo '<img src="' . esc_url($value) . '" style="max-width: 200px; height: auto;" />';
-        }
-        echo '</div>';
-        echo '<p class="description">' . __('Upload or select an image for the archive banner.', 'sardius-feed') . '</p>';
-    }
-    
-    public function banner_link_field_callback() {
-        $value = get_option('sardius_archive_banner_link', '');
-        echo '<input type="url" id="sardius_archive_banner_link" name="sardius_archive_banner_link" value="' . esc_attr($value) . '" class="regular-text" />';
-        echo '<p class="description">' . __('Enter the URL where the banner should link to (optional).', 'sardius-feed') . '</p>';
-    }
     
 
     

@@ -5,13 +5,7 @@
  * @package Sardius_Feed_Plugin
  */
 
-// Get banner settings
-$banner_image = get_option('sardius_archive_banner_image', '');
-$banner_link = get_option('sardius_archive_banner_link', '');
-
-if (empty($banner_image) || empty($banner_link)) {
-    return; // Don't show banner if no image or link is configured
-}
+// Static banner content - no admin settings needed
 ?>
 
 <div class="sardius-watch-more-banner">
@@ -23,7 +17,7 @@ if (empty($banner_image) || empty($banner_link)) {
         </div>
         
         <div class="banner-action">
-            <a href="<?php echo esc_url($banner_link); ?>" class="watch-more-button" target="_blank" rel="noopener">
+            <a href="https://watch.grace.church" class="watch-more-button" target="_blank" rel="noopener">
                 <span class="button-text">Watch More</span>
                 <span class="button-icon">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
