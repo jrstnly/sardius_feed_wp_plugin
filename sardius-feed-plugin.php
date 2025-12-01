@@ -465,6 +465,18 @@ class SardiusFeedPlugin {
             return false;
         }
         
+        // Remove duplicates based on pid (keep first occurrence)
+        $unique_hits = array();
+        $seen_pids = array();
+        foreach ($all_hits as $hit) {
+            $pid = $hit['pid'] ?? '';
+            if (!empty($pid) && !isset($seen_pids[$pid])) {
+                $unique_hits[] = $hit;
+                $seen_pids[$pid] = true;
+            }
+        }
+        $all_hits = $unique_hits;
+        
         // Sort by air date descending (newest first)
         usort($all_hits, function($a, $b) {
             $date_a = isset($a['airDate']) ? strtotime($a['airDate']) : 0;
@@ -548,6 +560,18 @@ class SardiusFeedPlugin {
             error_log('Sardius Feed Plugin: No services items fetched from API');
             return false;
         }
+        
+        // Remove duplicates based on pid (keep first occurrence)
+        $unique_hits = array();
+        $seen_pids = array();
+        foreach ($all_hits as $hit) {
+            $pid = $hit['pid'] ?? '';
+            if (!empty($pid) && !isset($seen_pids[$pid])) {
+                $unique_hits[] = $hit;
+                $seen_pids[$pid] = true;
+            }
+        }
+        $all_hits = $unique_hits;
         
         // Sort by air date descending (newest first)
         usort($all_hits, function($a, $b) {
