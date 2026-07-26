@@ -3,7 +3,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-$plugin = new SardiusFeedPlugin();
 $feed_data = $plugin->get_feed_data();
 $total_items = $feed_data ? count($feed_data['hits']) : 0;
 
@@ -62,7 +61,6 @@ if ($feed_data) {
     $feed_id = get_option('sardius_feed_id', '');
     $services_feed_id = get_option('sardius_services_feed_id', '');
     $media_slug = get_option('sardius_media_slug', 'sardius-media');
-    $plugin_instance = new SardiusFeedPlugin();
     $custom_template = get_option('sardius_media_template', '');
     $elementor_template_id = intval(get_option('sardius_elementor_template_id', 0));
     $archive_elementor_template_id = intval(get_option('sardius_archive_elementor_template_id', 0));

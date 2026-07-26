@@ -33,7 +33,7 @@ class SardiusFeedShortcodes {
             return '<p>Error: Media ID is required.</p>';
         }
         
-        $plugin = new SardiusFeedPlugin();
+        $plugin = SardiusFeedPlugin::get_instance();
         $feed_data = $plugin->get_feed_data();
         
         if (!$feed_data) {
@@ -59,7 +59,7 @@ class SardiusFeedShortcodes {
             'show_date' => 'true'
         ), $atts);
         
-        $plugin = new SardiusFeedPlugin();
+        $plugin = SardiusFeedPlugin::get_instance();
         $feed_data = $plugin->get_feed_data();
         
         if (!$feed_data) {
@@ -86,7 +86,7 @@ class SardiusFeedShortcodes {
             return '<p>Error: Media ID is required.</p>';
         }
         
-        $plugin = new SardiusFeedPlugin();
+        $plugin = SardiusFeedPlugin::get_instance();
         $feed_data = $plugin->get_feed_data();
         
         if (!$feed_data) {
@@ -111,7 +111,7 @@ class SardiusFeedShortcodes {
             'results_per_page' => '12'
         ), $atts);
         
-        $plugin = new SardiusFeedPlugin();
+        $plugin = SardiusFeedPlugin::get_instance();
         $feed_data = $plugin->get_feed_data();
         
         if (!$feed_data) {
