@@ -854,7 +854,12 @@ class SardiusFeedPlugin {
     
     public function ajax_get_frontend_paginated_items() {
         error_log('Sardius: Frontend pagination AJAX request received');
-        check_ajax_referer('sardius_frontend_nonce', 'nonce');
+
+        // This endpoint only returns public feed content and is intentionally
+        // available through wp_ajax_nopriv. Do not require a WordPress nonce:
+        // full-page caches such as Cloudflare APO can serve the page longer
+        // than a nonce remains valid, causing otherwise valid requests to fail
+        // with WordPress's nonce-specific 403 response.
         
         $page = intval($_POST['page'] ?? 1);
         $items_per_page = intval($_POST['items_per_page'] ?? 12);

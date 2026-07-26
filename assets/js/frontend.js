@@ -522,7 +522,6 @@ jQuery(document).ready(function($) {
                 type: 'POST',
                 data: {
                     action: 'sardius_get_frontend_paginated_items',
-                    nonce: paginationData.nonce,
                     page: page,
                     items_per_page: paginationData.itemsPerPage,
                     filters: filters
@@ -1206,4 +1205,4 @@ jQuery(document).ready(function($) {
             loadPage(page, filters);
         });
     }
-}); 
+});

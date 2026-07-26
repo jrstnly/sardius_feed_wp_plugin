@@ -23,8 +23,6 @@ if (!empty($items)) {
     sort($all_series);
 }
 
-// Create nonce for AJAX requests
-$frontend_nonce = wp_create_nonce('sardius_frontend_nonce');
 ?>
 
 <div class="sardius-media-archive-container">
@@ -187,7 +185,6 @@ window.sardiusPaginationData = {
     currentPage: <?php echo isset($_GET['media_page']) ? intval($_GET['media_page']) : 1; ?>,
     totalPages: 0,
     itemsPerPage: <?php echo $items_per_page; ?>,
-    nonce: '<?php echo $frontend_nonce; ?>',
     ajaxUrl: '<?php echo admin_url('admin-ajax.php'); ?>'
 };
 </script>
