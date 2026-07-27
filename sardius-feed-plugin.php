@@ -54,6 +54,7 @@ class SardiusFeedPlugin {
 
         add_action('init', array($this, 'init'));
         add_action('template_redirect', array($this, 'handle_virtual_pages'));
+        add_action('template_redirect', array($this, 'handle_public_feed_endpoint'), 0);
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('wp_ajax_sardius_refresh_feed', array($this, 'ajax_refresh_feed'));
         add_action('wp_ajax_sardius_get_filtered_items', array($this, 'ajax_get_filtered_items'));
@@ -137,6 +138,7 @@ class SardiusFeedPlugin {
         wp_enqueue_script('sardius-feed-frontend', SARDIUS_FEED_PLUGIN_URL . 'assets/js/frontend.js', array('jquery'), SARDIUS_FEED_VERSION, true);
         wp_localize_script('sardius-feed-frontend', 'sardius_ajax', array(
             'ajax_url' => admin_url('admin-ajax.php'),
+            'feed_url' => home_url('/sardius-feed-data/'),
             'nonce' => wp_create_nonce('sardius_nonce')
         ));
 
@@ -911,34 +913,76 @@ class SardiusFeedPlugin {
     public function ajax_get_frontend_paginated_items() {
         error_log('Sardius: Frontend pagination AJAX request received');
 
-        // This endpoint only returns public feed content and is intentionally
-        // available through wp_ajax_nopriv. Do not require a WordPress nonce:
-        // full-page caches such as Cloudflare APO can serve the page longer
-        // than a nonce remains valid, causing otherwise valid requests to fail
-        // with WordPress's nonce-specific 403 response.
-        
-        $page = intval($_POST['page'] ?? 1);
-        $items_per_page = intval($_POST['items_per_page'] ?? 12);
-        $filters = $_POST['filters'] ?? array();
-        
-        // Get all feed data first
-        $feed_data = $this->get_feed_data();
-        if (!$feed_data) {
+        // Retain the legacy AJAX route for compatibility. New frontend requests
+        // use the cacheable GET endpoint handled below.
+        $response_data = $this->get_frontend_paginated_response(
+            intval($_POST['page'] ?? 1),
+            intval($_POST['items_per_page'] ?? 12),
+            $this->sanitize_public_filters($_POST['filters'] ?? array())
+        );
+
+        if (!$response_data) {
             wp_send_json_error('No feed data available');
             return;
         }
-        
-        $all_items = $feed_data['hits'];
-        
-        // Apply filters if provided
-        if (!empty($filters)) {
-            $all_items = $this->filter_items($all_items, $filters);
+
+        wp_send_json_success($response_data);
+    }
+
+    public function handle_public_feed_endpoint() {
+        if (!get_query_var('sardius_feed_data')) {
+            return;
         }
-        
-        // Calculate pagination for filtered data
+
+        if (strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+            status_header(405);
+            header('Allow: GET');
+            header('Cache-Control: no-store');
+            wp_send_json_error(array('message' => __('Method not allowed', 'sardius-feed')), 405);
+        }
+
+        $filters = $this->sanitize_public_filters($_GET['filters'] ?? array());
+        $view = sanitize_key($_GET['view'] ?? 'paginated');
+
+        if ($view === 'filtered') {
+            $response_data = $this->get_filtered_items_response($filters);
+        } else {
+            $response_data = $this->get_frontend_paginated_response(
+                intval($_GET['page'] ?? 1),
+                intval($_GET['items_per_page'] ?? 12),
+                $filters
+            );
+        }
+
+        if (!$response_data) {
+            header('Cache-Control: no-store');
+            wp_send_json_error(array('message' => __('No feed data available', 'sardius-feed')), 503);
+        }
+
+        // Browsers retain the response briefly, while Cloudflare can keep each
+        // query-string variation at the edge until the hourly feed refresh.
+        status_header(200);
+        header('Cache-Control: public, max-age=60');
+        header('Cloudflare-CDN-Cache-Control: public, max-age=3600, stale-while-revalidate=60');
+        header('X-Robots-Tag: noindex, nofollow');
+        wp_send_json_success($response_data);
+    }
+
+    private function get_frontend_paginated_response($page, $items_per_page, $filters) {
+        $feed_data = $this->get_feed_data();
+        if (!$feed_data) {
+            return false;
+        }
+
+        $page = max(1, intval($page));
+        $items_per_page = max(1, min(100, intval($items_per_page)));
+        $all_items = empty($filters)
+            ? $feed_data['hits']
+            : $this->filter_items($feed_data['hits'], $filters);
+
         $total_items = count($all_items);
-        $total_pages = ceil($total_items / $items_per_page);
-        $page = max(1, min($page, $total_pages));
+        $total_pages = (int) ceil($total_items / $items_per_page);
+        $page = $total_pages > 0 ? min($page, $total_pages) : 1;
         
         $offset = ($page - 1) * $items_per_page;
         $paginated_items = array_slice($all_items, $offset, $items_per_page);
@@ -951,7 +995,6 @@ class SardiusFeedPlugin {
             'items_per_page' => $items_per_page
         );
         
-        // Generate HTML for items
         ob_start();
         if (!empty($paginated_data['items'])) {
             foreach ($paginated_data['items'] as $item) {
@@ -961,11 +1004,9 @@ class SardiusFeedPlugin {
             echo '<p>' . __('No media items found.', 'sardius-feed') . '</p>';
         }
         $items_html = ob_get_clean();
-        
-        // Generate pagination HTML
         $pagination_html = $this->render_frontend_pagination_html($paginated_data);
         
-        wp_send_json_success(array(
+        return array(
             'items_html' => $items_html,
             'pagination_html' => $pagination_html,
             'pagination' => array(
@@ -974,7 +1015,50 @@ class SardiusFeedPlugin {
                 'current_page' => $paginated_data['current_page'],
                 'items_per_page' => $paginated_data['items_per_page']
             )
-        ));
+        );
+    }
+
+    private function get_filtered_items_response($filters) {
+        $feed_data = $this->get_feed_data();
+        if (!$feed_data) {
+            return false;
+        }
+
+        $filtered_items = $this->filter_items($feed_data['hits'], $filters);
+        $prepared_items = array();
+        foreach ($filtered_items as $item) {
+            $prepared_items[] = array(
+                'pid' => $item['pid'],
+                'title' => $item['title'],
+                'url' => $this->get_media_url($item),
+                'thumbnail_url' => !empty($item['files'][0]['url']) ? $item['files'][0]['url'] : '',
+                'duration_formatted' => $this->format_duration($item['duration'] ?? 0),
+                'series' => $item['series'] ?? '',
+                'bible_reference' => !empty($item['metadata']['bibleReference']) ? implode(', ', $item['metadata']['bibleReference']) : '',
+                'air_date_formatted' => $this->format_date($item['airDate']),
+            );
+        }
+
+        return array(
+            'items' => $prepared_items,
+            'total' => count($prepared_items),
+        );
+    }
+
+    private function sanitize_public_filters($filters) {
+        if (!is_array($filters)) {
+            return array();
+        }
+
+        $allowed_filters = array('type', 'category', 'speaker', 'search', 'dateFrom', 'dateTo', 'sort');
+        $sanitized_filters = array();
+        foreach ($allowed_filters as $filter_name) {
+            if (isset($filters[$filter_name]) && !is_array($filters[$filter_name])) {
+                $sanitized_filters[$filter_name] = sanitize_text_field(wp_unslash($filters[$filter_name]));
+            }
+        }
+
+        return $sanitized_filters;
     }
     
     private function filter_items($items, $filters) {
@@ -983,17 +1067,16 @@ class SardiusFeedPlugin {
         // Filter by type (e.g. 'message', 'full_service', 'spanish')
         if (!empty($filters['type'])) {
             $filtered = array_filter($filtered, function($item) use ($filters) {
-                // This logic assumes that the type is stored in the tags or categories.
-                // You might need to adjust this depending on where this data is in your feed.
-                $type_tags = ['message', 'full service', 'spanish']; // Example tags
                 $item_tags = array_map('strtolower', $item['tags'] ?? []);
+                $requested_type = strtolower($filters['type']);
+                $requested_type = str_replace(array('_', '-'), ' ', $requested_type);
                 
-                if ($filters['type'] === 'message') {
+                if ($requested_type === 'message') {
                     // Exclude 'full service' and 'spanish'
-                    return !in_array('full service', $item_tags) && !in_array('spanish', $item_tags);
+                    return !in_array('full service', $item_tags, true) && !in_array('spanish', $item_tags, true);
                 }
                 
-                return in_array(strtolower($filters['type']), $item_tags);
+                return in_array($requested_type, $item_tags, true);
             });
         }
         
@@ -1100,7 +1183,7 @@ class SardiusFeedPlugin {
     public function ensure_rewrite_rules() {
         // Flush once per version and slug combo to avoid 404 on archive route
         $marker = get_option('sardius_rewrite_initialized');
-        $current = SARDIUS_FEED_VERSION . '|' . $this->get_base_slug();
+        $current = SARDIUS_FEED_VERSION . '|feed-endpoint-v1|' . $this->get_base_slug();
         if ($marker !== $current) {
             $this->add_rewrite_rules();
             flush_rewrite_rules();
@@ -1223,6 +1306,12 @@ class SardiusFeedPlugin {
     }
     
     public function add_rewrite_rules() {
+        add_rewrite_rule(
+            '^sardius-feed-data/?$',
+            'index.php?sardius_feed_data=1',
+            'top'
+        );
+
         $base_slug = $this->get_base_slug();
         add_rewrite_rule(
             '^' . preg_quote($base_slug, '/') . '/([^/]+)/?$',
@@ -1481,6 +1570,7 @@ SardiusFeedPlugin::get_instance();
 add_filter('query_vars', function($vars) {
     $vars[] = 'media_slug';
     $vars[] = 'sardius_sitemap';
+    $vars[] = 'sardius_feed_data';
     return $vars;
 });
 

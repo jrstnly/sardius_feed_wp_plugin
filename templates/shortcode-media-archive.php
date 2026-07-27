@@ -180,11 +180,11 @@ if (!empty($items)) {
 </div>
 
 <script>
-// Store pagination data for AJAX requests
+// Store pagination data for cacheable feed requests
 window.sardiusPaginationData = {
     currentPage: <?php echo isset($_GET['media_page']) ? intval($_GET['media_page']) : 1; ?>,
     totalPages: 0,
     itemsPerPage: <?php echo $items_per_page; ?>,
-    ajaxUrl: '<?php echo admin_url('admin-ajax.php'); ?>'
+    feedUrl: <?php echo wp_json_encode(home_url('/sardius-feed-data/')); ?>
 };
 </script>

@@ -228,6 +228,17 @@ The plugin uses intelligent caching to improve performance:
 
 WordPress cron is traffic-driven by default. On sites where Cloudflare APO serves nearly all page requests from the edge, configure the server or hosting provider to request `wp-cron.php` regularly so the hourly refresh runs even when no request reaches the WordPress origin.
 
+### Cloudflare Feed Cache Rule
+
+Frontend filtering and pagination use the public, read-only `GET /sardius-feed-data/` endpoint. To cache its JSON responses at Cloudflare's edge, create a Cache Rule with:
+
+- **Expression**: `(http.request.uri.path eq "/sardius-feed-data/" and http.request.method eq "GET")`
+- **Cache eligibility**: Eligible for cache
+- **Edge TTL**: Respect origin
+- **Cache key**: Use the standard cache key and retain all query-string parameters
+
+The endpoint sends a one-hour `Cloudflare-CDN-Cache-Control` TTL. Each page and filter combination is cached separately, and the scheduled feed refresh purges those variants whenever Sardius content changes. Do not ignore the query string in the cache key, or different filters and pages will receive the same response.
+
 ## SEO Features
 
 ### SEO-Friendly URLs

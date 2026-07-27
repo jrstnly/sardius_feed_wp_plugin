@@ -518,10 +518,10 @@ jQuery(document).ready(function($) {
             $grid.html('<div class="loading-spinner"><div class="spinner"></div><p>Loading media items...</p></div>');
             
             $.ajax({
-                url: paginationData.ajaxUrl,
-                type: 'POST',
+                url: paginationData.feedUrl,
+                type: 'GET',
                 data: {
-                    action: 'sardius_get_frontend_paginated_items',
+                    view: 'paginated',
                     page: page,
                     items_per_page: paginationData.itemsPerPage,
                     filters: filters
@@ -621,11 +621,10 @@ jQuery(document).ready(function($) {
         $grid.css('opacity', 0.5); // Dim the grid while loading
 
         $.ajax({
-            url: sardius_ajax.ajax_url,
-            type: 'POST',
+            url: sardius_ajax.feed_url,
+            type: 'GET',
             data: {
-                action: 'sardius_get_filtered_items',
-                nonce: sardius_ajax.nonce,
+                view: 'filtered',
                 filters: filters
             },
             success: function(response) {
