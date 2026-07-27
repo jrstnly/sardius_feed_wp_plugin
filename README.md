@@ -9,7 +9,7 @@ A WordPress plugin that pulls media from the Sardius content feed and creates vi
 - **Shortcode Support**: Flexible shortcodes for displaying media content anywhere on your site
 - **Advanced Filtering**: Filter media by category, search terms, and sort by date
 - **Admin Management**: Complete admin interface for managing and viewing media with pagination
-- **Intelligent Caching**: 1-hour cache with automatic refresh on user visits
+- **Intelligent Caching**: 1-hour cache with an hourly scheduled refresh
 - **Responsive Design**: Mobile-friendly interface
 - **Video Player**: Built-in video player with keyboard shortcuts
 - **Download Support**: Direct download links for media files
@@ -222,9 +222,11 @@ These settings can be configured in the admin interface under **Sardius Feed** >
 The plugin uses intelligent caching to improve performance:
 
 - **Cache Duration**: Data is cached for 1 hour by default
-- **Automatic Refresh**: When the cache expires, fresh data is automatically fetched on the next user visit
+- **Automatic Refresh**: Both feeds are refreshed hourly through WordPress cron
+- **Cloudflare APO Purge**: When refreshed feed content changes, the Cloudflare page cache is purged so server-rendered banners and archive content update
 - **Manual Refresh**: Use the "Refresh Feed" button in the admin interface to manually update the cache
-- **No Background Jobs**: The plugin doesn't use WordPress cron jobs, making it simpler and more reliable
+
+WordPress cron is traffic-driven by default. On sites where Cloudflare APO serves nearly all page requests from the edge, configure the server or hosting provider to request `wp-cron.php` regularly so the hourly refresh runs even when no request reaches the WordPress origin.
 
 ## SEO Features
 
@@ -406,4 +408,4 @@ This plugin is licensed under the GPL v2 or later.
 
 - Built for WordPress
 - Integrates with Sardius Media API
-- Uses WordPress coding standards 
+- Uses WordPress coding standards

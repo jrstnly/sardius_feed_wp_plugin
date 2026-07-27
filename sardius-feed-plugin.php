@@ -28,6 +28,8 @@ unset($__sardius_plugin_data, $__sardius_version);
 
 class SardiusFeedPlugin {
     
+    const REFRESH_CRON_HOOK = 'sardius_feed_scheduled_refresh';
+
     private static $instance = null;
     private static $current_media_item = null;
     private $cache_duration = 3600; // 1 hour
@@ -58,7 +60,9 @@ class SardiusFeedPlugin {
         add_action('wp_ajax_sardius_get_paginated_items', array($this, 'ajax_get_paginated_items'));
         add_action('wp_ajax_sardius_get_frontend_paginated_items', array($this, 'ajax_get_frontend_paginated_items'));
         add_action('wp_ajax_nopriv_sardius_get_frontend_paginated_items', array($this, 'ajax_get_frontend_paginated_items'));
+        add_action(self::REFRESH_CRON_HOOK, array($this, 'scheduled_refresh_feed'));
         add_action('init', array($this, 'add_rewrite_rules'));
+        add_action('init', array($this, 'ensure_refresh_scheduled'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_enqueue_scripts', array($this, 'enqueue_admin_scripts'));
         add_shortcode('sardius_media_content', array($this, 'shortcode_media_content'));
@@ -105,11 +109,18 @@ class SardiusFeedPlugin {
         // Ensure our rewrite rules are registered before flushing
         $this->add_rewrite_rules();
         flush_rewrite_rules();
+        $this->ensure_refresh_scheduled();
     }
     
     public function deactivate() {
-        // Clean up if necessary
+        wp_clear_scheduled_hook(self::REFRESH_CRON_HOOK);
         flush_rewrite_rules();
+    }
+
+    public function ensure_refresh_scheduled() {
+        if (!wp_next_scheduled(self::REFRESH_CRON_HOOK)) {
+            wp_schedule_event(time() + MINUTE_IN_SECONDS, 'hourly', self::REFRESH_CRON_HOOK);
+        }
     }
     
     public function enqueue_scripts() {
@@ -755,16 +766,9 @@ class SardiusFeedPlugin {
             wp_die(__('Unauthorized', 'sardius-feed'));
         }
         
-        // Clear cache and fetch new data
-        delete_option('sardius_feed_cache');
-        delete_option('sardius_feed_last_update');
-        delete_option('sardius_services_feed_cache');
-        delete_option('sardius_services_feed_last_update');
-        $this->feed_data = null;
-        $this->services_feed_data = null;
-        
-        $feed_data = $this->get_feed_data();
-        $services_data = $this->get_services_feed_data();
+        $refresh_result = $this->refresh_feed_caches(true);
+        $feed_data = $refresh_result['feed_data'];
+        $services_data = $refresh_result['services_data'];
         
         if ($feed_data) {
             $services_count = $services_data ? count($services_data['hits']) : 0;
@@ -776,6 +780,58 @@ class SardiusFeedPlugin {
                 'message' => __('Failed to refresh feed', 'sardius-feed')
             ));
         }
+    }
+
+    public function scheduled_refresh_feed() {
+        $this->refresh_feed_caches();
+    }
+
+    private function refresh_feed_caches($force_purge = false) {
+        $old_feed_cache = get_option('sardius_feed_cache', '');
+        $old_services_cache = get_option('sardius_services_feed_cache', '');
+
+        $feed_data = $this->fetch_feed_data();
+        $services_data = $this->fetch_services_feed_data();
+        $content_changed = false;
+
+        if ($feed_data) {
+            $encoded_feed_data = wp_json_encode($feed_data);
+            $content_changed = $content_changed || $encoded_feed_data !== $old_feed_cache;
+            $this->update_cache_option('sardius_feed_cache', $encoded_feed_data);
+            $this->update_cache_option('sardius_feed_last_update', time());
+            $this->feed_data = $feed_data;
+        } else {
+            $this->feed_data = null;
+        }
+
+        if ($services_data) {
+            $encoded_services_data = wp_json_encode($services_data);
+            $content_changed = $content_changed || $encoded_services_data !== $old_services_cache;
+            $this->update_cache_option('sardius_services_feed_cache', $encoded_services_data);
+            $this->update_cache_option('sardius_services_feed_last_update', time());
+            $this->services_feed_data = $services_data;
+        } else {
+            $this->services_feed_data = null;
+        }
+
+        if ($content_changed) {
+            do_action('sardius_feed_content_updated', $feed_data, $services_data);
+        }
+
+        if ($content_changed || $force_purge) {
+            /**
+             * The Cloudflare WordPress plugin listens to this established cache
+             * purge action, allowing APO's cached HTML to be invalidated without
+             * storing separate Cloudflare credentials in this plugin.
+             */
+            do_action('autoptimize_action_cachepurged');
+        }
+
+        return array(
+            'feed_data' => $feed_data,
+            'services_data' => $services_data,
+            'changed' => $content_changed,
+        );
     }
     
     public function ajax_get_filtered_items() {
@@ -1041,12 +1097,6 @@ class SardiusFeedPlugin {
         }
     }
     
-    public function maybe_reschedule_on_interval_change($option, $old_value, $value) {
-        if ($option === 'sardius_feed_refresh_interval' && $old_value !== $value) {
-            $this->schedule_auto_refresh();
-        }
-    }
-
     public function ensure_rewrite_rules() {
         // Flush once per version and slug combo to avoid 404 on archive route
         $marker = get_option('sardius_rewrite_initialized');
