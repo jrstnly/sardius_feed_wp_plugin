@@ -3,7 +3,7 @@
  * Plugin Name: Sardius Feed Plugin
  * Plugin URI: https://sardius.media
  * Description: Pulls media from Sardius feed and creates virtual pages with shortcode support for flexible content display
- * Version: 1.0.0
+ * Version: 1.1.2
  * Author: JR Stanley
  * License: GPL v2 or later
  * Text Domain: sardius-feed
@@ -1249,7 +1249,11 @@ class SardiusFeedPlugin {
     }
     
     public function format_datetime($timestamp) {
-        return date_i18n(get_option('date_format') . ' ' . get_option('time_format'), $timestamp);
+        return wp_date(
+            get_option('date_format') . ' ' . get_option('time_format'),
+            $timestamp,
+            wp_timezone()
+        );
     }
     
     private function add_seo_meta_tags($media_item) {

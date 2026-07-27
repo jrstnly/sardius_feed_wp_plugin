@@ -1,4 +1,25 @@
 jQuery(document).ready(function($) {
+
+    // Display stored UTC timestamps in the current admin user's browser timezone.
+    $('.sardius-local-datetime').each(function() {
+        var timestamp = Number($(this).data('timestamp'));
+
+        if (!Number.isFinite(timestamp) || timestamp <= 0) {
+            return;
+        }
+
+        var localDate = new Date(timestamp * 1000);
+        var formattedDate = new Intl.DateTimeFormat(undefined, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            timeZoneName: 'short'
+        }).format(localDate);
+
+        $(this).text(formattedDate);
+    });
     
     // Refresh feed functionality
     $('#refresh-feed').on('click', function() {
@@ -113,4 +134,4 @@ jQuery(document).ready(function($) {
         
         imageUploader.open();
     });
-}); 
+});

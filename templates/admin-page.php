@@ -189,7 +189,14 @@ if ($feed_data) {
                 <?php _e('Categories', 'sardius-feed'); ?>
             </span>
             <span class="stat-item">
-                <strong><?php echo $plugin->format_datetime(get_option('sardius_feed_last_update', 0)); ?></strong>
+                <?php $last_update = intval(get_option('sardius_feed_last_update', 0)); ?>
+                <strong>
+                    <time
+                        class="sardius-local-datetime"
+                        datetime="<?php echo esc_attr(gmdate('c', $last_update)); ?>"
+                        data-timestamp="<?php echo esc_attr($last_update); ?>"
+                    ><?php echo esc_html($plugin->format_datetime($last_update)); ?></time>
+                </strong>
                 <?php _e('Last Updated', 'sardius-feed'); ?>
             </span>
         </div>
