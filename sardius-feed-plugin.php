@@ -3,7 +3,7 @@
  * Plugin Name: Sardius Feed Plugin
  * Plugin URI: https://sardius.media
  * Description: Pulls media from Sardius feed and creates virtual pages with shortcode support for flexible content display
- * Version: 1.1.2
+ * Version: 1.1.3
  * Author: JR Stanley
  * License: GPL v2 or later
  * Text Domain: sardius-feed
