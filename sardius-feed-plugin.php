@@ -753,10 +753,22 @@ class SardiusFeedPlugin {
                 get_footer();
             }
         } else {
-            // Make current plugin instance available to the template for helpers
-            $plugin = $this;
-            // Include the template
-            include SARDIUS_FEED_PLUGIN_PATH . 'templates/single-media.php';
+            // Render the built-in media content inside the active theme. The old
+            // single-media.php wrapper was removed when page rendering moved to
+            // the reusable single-media-content.php template.
+            if (function_exists('wp_is_block_theme') && wp_is_block_theme()) {
+                echo do_blocks('<!-- wp:template-part {"slug":"header"} /-->');
+            } else {
+                get_header();
+            }
+
+            echo $this->build_default_media_content_html($media_item);
+
+            if (function_exists('wp_is_block_theme') && wp_is_block_theme()) {
+                echo do_blocks('<!-- wp:template-part {"slug":"footer"} /-->');
+            } else {
+                get_footer();
+            }
         }
         exit;
     }
