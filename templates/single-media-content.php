@@ -5,22 +5,39 @@
  * @package Sardius_Feed_Plugin
  */
 
-$title = esc_html($media_item['title'] ?? '');
-$airDate = esc_html($plugin->format_date($media_item['airDate'] ?? ''));
-$series = !empty($media_item['series']) ? '<span class="media-series"><strong>' . esc_html__('Series:', 'sardius-feed') . '</strong> ' . esc_html($media_item['series']) . '</span>' : '';
+$title_text = $plugin->format_text_value($media_item['title'] ?? '');
+$air_date_text = $plugin->format_text_value($media_item['airDate'] ?? '');
+$series_text = $plugin->format_text_value($media_item['series'] ?? '');
+
+$title = esc_html($title_text);
+$airDate = esc_html($plugin->format_date($air_date_text));
+$series = $series_text !== '' ? '<span class="media-series"><strong>' . esc_html__('Series:', 'sardius-feed') . '</strong> ' . esc_html($series_text) . '</span>' : '';
 
 // Create individual pills for each scripture reference
 $scripture = '';
-if (!empty($media_item['metadata']['bibleReference'])) {
-    $scripture_references = (array)$media_item['metadata']['bibleReference'];
+$metadata = $media_item['metadata'] ?? array();
+if (is_object($metadata)) {
+    $metadata = get_object_vars($metadata);
+}
+$bible_reference = is_array($metadata) ? ($metadata['bibleReference'] ?? '') : '';
+if ($bible_reference !== '' && $bible_reference !== array()) {
+    $scripture_references = is_array($bible_reference) ? $bible_reference : array($bible_reference);
+    if (!empty($scripture_references) && array_keys($scripture_references) !== range(0, count($scripture_references) - 1)) {
+        $scripture_references = array($scripture_references);
+    }
     $scripture_pills = array();
     foreach ($scripture_references as $reference) {
-        $scripture_pills[] = '<span class="media-scripture">' . esc_html($reference) . '</span>';
+        $reference_text = $plugin->format_text_value($reference);
+        if ($reference_text !== '') {
+            $scripture_pills[] = '<span class="media-scripture">' . esc_html($reference_text) . '</span>';
+        }
     }
-    $scripture = '<div class="media-scripture-container"><strong>' . esc_html__('Scripture:', 'sardius-feed') . '</strong><div class="scripture-pills">' . implode(' ', $scripture_pills) . '</div></div>';
+    if (!empty($scripture_pills)) {
+        $scripture = '<div class="media-scripture-container"><strong>' . esc_html__('Scripture:', 'sardius-feed') . '</strong><div class="scripture-pills">' . implode(' ', $scripture_pills) . '</div></div>';
+    }
 }
 
-$descriptionText = $media_item['description'] ?? '';
+$descriptionText = $plugin->format_text_value($media_item['description'] ?? '');
 $description = $descriptionText ? ('<div class="media-description"><h3>' . esc_html__('Description', 'sardius-feed') . '</h3><p>' . esc_html($descriptionText) . '</p></div>') : '';
 $video = $plugin->build_video_player_html($media_item);
 ?>

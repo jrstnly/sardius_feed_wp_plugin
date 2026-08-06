@@ -3,7 +3,7 @@
  * Plugin Name: Sardius Feed Plugin
  * Plugin URI: https://sardius.media
  * Description: Pulls media from Sardius feed and creates virtual pages with shortcode support for flexible content display
- * Version: 1.1.3
+ * Version: 1.1.5
  * Author: JR Stanley
  * License: GPL v2 or later
  * Text Domain: sardius-feed
@@ -144,20 +144,24 @@ class SardiusFeedPlugin {
 
         // Ensure Elementor frontend assets (and its localized config) are loaded on virtual media pages
         if ($this->is_media_request() && class_exists('Elementor\\Plugin')) {
-            $elementor = \Elementor\Plugin::instance();
-            // Core Elementor assets
-            $elementor->frontend->enqueue_styles();
-            $elementor->frontend->enqueue_scripts();
-            // Try to enqueue active kit/global styles when available
-            if (method_exists($elementor, 'kits_manager')) {
-                try { $elementor->kits_manager->enqueue_styles(); } catch (\Throwable $e) {}
-            }
-            // If a specific Saved Template is selected, enqueue its CSS file
-            $template_id = intval(get_option('sardius_elementor_template_id', 0));
-            if (class_exists('Elementor\\Core\\Files\\CSS\\Post')) {
-                if ($template_id > 0) {
-                    try { \Elementor\Core\Files\CSS\Post::create($template_id)->enqueue(); } catch (\Throwable $e) {}
+            try {
+                $elementor = \Elementor\Plugin::instance();
+                // Core Elementor assets
+                if (isset($elementor->frontend)) {
+                    $elementor->frontend->enqueue_styles();
+                    $elementor->frontend->enqueue_scripts();
                 }
+                // Enqueue active kit/global styles when available.
+                if (isset($elementor->kits_manager)) {
+                    $elementor->kits_manager->enqueue_styles();
+                }
+                // If a specific Saved Template is selected, enqueue its CSS file
+                $template_id = intval(get_option('sardius_elementor_template_id', 0));
+                if ($template_id > 0 && class_exists('Elementor\\Core\\Files\\CSS\\Post')) {
+                    \Elementor\Core\Files\CSS\Post::create($template_id)->enqueue();
+                }
+            } catch (\Throwable $e) {
+                error_log('Sardius Feed Plugin: Elementor asset setup failed - ' . $e->getMessage());
             }
         }
     }
@@ -680,17 +684,10 @@ class SardiusFeedPlugin {
             wp_die(__('Media not found', 'sardius-feed'));
         }
         
-        // Set up virtual page
-        global $wp_query;
-        $wp_query->is_page = true;
-        $wp_query->is_singular = true;
-        $wp_query->is_home = false;
-        $wp_query->is_archive = false;
-        $wp_query->is_404 = false;
-        
-        // Set up SEO-friendly page title and meta
-        $wp_query->post_title = $media_item['title'];
-        $wp_query->post_content = $media_item['searchText'] ?? '';
+        // Supply the complete queried-object state expected by themes and page
+        // builders. Setting only is_page/is_singular leaves the queried object
+        // null and can trigger PHP 8 type errors in their frontend hooks.
+        $this->set_virtual_page_query($media_item, $media_slug);
         
         // Add SEO meta tags
         add_action('wp_head', function() use ($media_item) {
@@ -699,22 +696,13 @@ class SardiusFeedPlugin {
         
         // Try Elementor template first if configured
         $elementor_template_id = intval(get_option('sardius_elementor_template_id', 0));
-        if ($elementor_template_id > 0 && function_exists('do_shortcode')) {
+        $content_html = '';
+        if ($elementor_template_id > 0) {
             self::$current_media_item = $media_item;
-            // Prefer Elementor's shortcode API to render a saved template; allows Elementor to manage its own assets
-            $content_html = do_shortcode('[elementor-template id="' . intval($elementor_template_id) . '"]');
-            // Fallback to builder API if shortcode produced nothing and Elementor core is present
-            if (empty($content_html) && class_exists('Elementor\\Plugin')) {
-                $content_html = do_shortcode(\Elementor\Plugin::instance()->frontend->get_builder_content_for_display($elementor_template_id, true));
-            }
-            // Prepare WP query state for a page-like template
-            global $wp_query;
-            $wp_query->is_page = true;
-            $wp_query->is_singular = true;
-            $wp_query->is_home = false;
-            $wp_query->is_archive = false;
-            $wp_query->is_404 = false;
+            $content_html = $this->render_elementor_template($elementor_template_id);
+        }
 
+        if ($content_html !== '') {
             // Output within header/footer
             if (function_exists('wp_is_block_theme') && wp_is_block_theme()) {
                 echo do_blocks('<!-- wp:template-part {"slug":"header"} /-->');
@@ -731,14 +719,6 @@ class SardiusFeedPlugin {
             }
         } elseif (!empty($custom_template_html = $this->get_media_template_html($media_item))) {
             // If a custom admin-defined template exists, render it; otherwise use default template file
-            // Prepare WP query state for a page-like template
-            global $wp_query;
-            $wp_query->is_page = true;
-            $wp_query->is_singular = true;
-            $wp_query->is_home = false;
-            $wp_query->is_archive = false;
-            $wp_query->is_404 = false;
-
             if (function_exists('wp_is_block_theme') && wp_is_block_theme()) {
                 echo do_blocks('<!-- wp:template-part {"slug":"header"} /-->');
             } else {
@@ -771,6 +751,77 @@ class SardiusFeedPlugin {
             }
         }
         exit;
+    }
+
+    private function set_virtual_page_query(array $media_item, $media_slug) {
+        global $wp_query, $post;
+
+        $now = current_time('mysql');
+        $virtual_post = new \WP_Post((object) array(
+            'ID' => 0,
+            'post_author' => 0,
+            'post_date' => $now,
+            'post_date_gmt' => get_gmt_from_date($now),
+            'post_content' => $this->format_text_value($media_item['searchText'] ?? ''),
+            'post_title' => $this->format_text_value($media_item['title'] ?? ''),
+            'post_excerpt' => '',
+            'post_status' => 'publish',
+            'comment_status' => 'closed',
+            'ping_status' => 'closed',
+            'post_password' => '',
+            'post_name' => sanitize_title($media_slug),
+            'to_ping' => '',
+            'pinged' => '',
+            'post_modified' => $now,
+            'post_modified_gmt' => get_gmt_from_date($now),
+            'post_content_filtered' => '',
+            'post_parent' => 0,
+            'guid' => home_url('/' . $this->get_base_slug() . '/' . $media_slug . '/'),
+            'menu_order' => 0,
+            'post_type' => 'page',
+            'post_mime_type' => '',
+            'comment_count' => 0,
+            'filter' => 'raw',
+        ));
+
+        $post = $virtual_post;
+        $wp_query->post = $virtual_post;
+        $wp_query->posts = array($virtual_post);
+        $wp_query->post_count = 1;
+        $wp_query->found_posts = 1;
+        $wp_query->max_num_pages = 1;
+        $wp_query->queried_object = $virtual_post;
+        $wp_query->queried_object_id = 0;
+        $wp_query->is_page = true;
+        $wp_query->is_singular = true;
+        $wp_query->is_home = false;
+        $wp_query->is_archive = false;
+        $wp_query->is_404 = false;
+    }
+
+    private function render_elementor_template($template_id) {
+        try {
+            if (function_exists('shortcode_exists') && shortcode_exists('elementor-template')) {
+                $content = do_shortcode('[elementor-template id="' . intval($template_id) . '"]');
+                if (is_string($content) && trim($content) !== '') {
+                    return $content;
+                }
+            }
+
+            if (class_exists('Elementor\\Plugin')) {
+                $elementor = \Elementor\Plugin::instance();
+                if (isset($elementor->frontend)) {
+                    $content = $elementor->frontend->get_builder_content_for_display($template_id, true);
+                    if (is_string($content) && trim($content) !== '') {
+                        return do_shortcode($content);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('Sardius Feed Plugin: Elementor template rendering failed - ' . $e->getMessage());
+        }
+
+        return '';
     }
     
     public function ajax_refresh_feed() {
@@ -1267,13 +1318,56 @@ class SardiusFeedPlugin {
             wp_timezone()
         );
     }
+
+    /**
+     * Convert feed metadata to displayable text without passing arrays or
+     * objects into WordPress escaping functions, which is fatal on PHP 8.
+     */
+    public function format_text_value($value) {
+        if (is_string($value) || is_numeric($value)) {
+            return trim((string) $value);
+        }
+
+        if (is_object($value)) {
+            $value = get_object_vars($value);
+        }
+
+        if (!is_array($value)) {
+            return '';
+        }
+
+        // Custom metadata commonly wraps its useful text in one of these keys.
+        foreach (array('label', 'name', 'title', 'value', 'text') as $key) {
+            if (array_key_exists($key, $value)) {
+                $text = $this->format_text_value($value[$key]);
+                if ($text !== '') {
+                    return $text;
+                }
+            }
+        }
+
+        $parts = array();
+        foreach ($value as $key => $part) {
+            // Avoid leaking structural metadata into visible copy.
+            if (in_array((string) $key, array('id', 'pid', 'type'), true)) {
+                continue;
+            }
+
+            $text = $this->format_text_value($part);
+            if ($text !== '') {
+                $parts[] = $text;
+            }
+        }
+
+        return implode(', ', array_unique($parts));
+    }
     
     private function add_seo_meta_tags($media_item) {
-        $title = $media_item['title'];
-        $description = $media_item['searchText'] ?? $title;
-        $duration = $this->format_duration($media_item['duration']);
-        $air_date = $this->format_date($media_item['airDate']);
-        $categories = !empty($media_item['categories']) ? implode(', ', $media_item['categories']) : '';
+        $title = $this->format_text_value($media_item['title'] ?? '');
+        $description = $this->format_text_value($media_item['searchText'] ?? $title);
+        $duration_ms = is_numeric($media_item['duration'] ?? null) ? (float) $media_item['duration'] : 0;
+        $air_date_value = $this->format_text_value($media_item['airDate'] ?? '');
+        $categories = $this->format_text_value($media_item['categories'] ?? array());
         
         // Meta title
         echo '<title>' . esc_html($title) . ' - ' . get_bloginfo('name') . '</title>' . "\n";
@@ -1298,8 +1392,8 @@ class SardiusFeedPlugin {
         echo '<meta name="twitter:description" content="' . esc_attr(wp_trim_words($description, 25, '...')) . '" />' . "\n";
         
         // Video-specific meta tags
-        echo '<meta property="video:duration" content="' . esc_attr($media_item['duration'] / 1000) . '" />' . "\n";
-        echo '<meta property="video:release_date" content="' . esc_attr($media_item['airDate']) . '" />' . "\n";
+        echo '<meta property="video:duration" content="' . esc_attr($duration_ms / 1000) . '" />' . "\n";
+        echo '<meta property="video:release_date" content="' . esc_attr($air_date_value) . '" />' . "\n";
         
         if (!empty($categories)) {
             echo '<meta property="article:section" content="' . esc_attr($categories) . '" />' . "\n";
@@ -1311,8 +1405,8 @@ class SardiusFeedPlugin {
             '@type' => 'VideoObject',
             'name' => $title,
             'description' => $description,
-            'duration' => 'PT' . floor($media_item['duration'] / 60000) . 'M' . floor(($media_item['duration'] % 60000) / 1000) . 'S',
-            'uploadDate' => $media_item['airDate'],
+            'duration' => 'PT' . floor($duration_ms / 60000) . 'M' . floor(fmod($duration_ms, 60000) / 1000) . 'S',
+            'uploadDate' => $air_date_value,
             'thumbnailUrl' => !empty($media_item['files'][0]['url']) ? $media_item['files'][0]['url'] : '',
             'contentUrl' => $media_item['media']['url'] ?? '',
             'genre' => $categories
