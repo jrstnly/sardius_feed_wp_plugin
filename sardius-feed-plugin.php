@@ -3,7 +3,7 @@
  * Plugin Name: Sardius Feed Plugin
  * Plugin URI: https://sardius.media
  * Description: Pulls media from Sardius feed and creates virtual pages with shortcode support for flexible content display
- * Version: 1.1.5
+ * Version: 1.1.6
  * Author: JR Stanley
  * License: GPL v2 or later
  * Text Domain: sardius-feed
@@ -146,14 +146,10 @@ class SardiusFeedPlugin {
         if ($this->is_media_request() && class_exists('Elementor\\Plugin')) {
             try {
                 $elementor = \Elementor\Plugin::instance();
-                // Core Elementor assets
+                // Elementor's frontend style hooks also enqueue the active kit.
                 if (isset($elementor->frontend)) {
                     $elementor->frontend->enqueue_styles();
                     $elementor->frontend->enqueue_scripts();
-                }
-                // Enqueue active kit/global styles when available.
-                if (isset($elementor->kits_manager)) {
-                    $elementor->kits_manager->enqueue_styles();
                 }
                 // If a specific Saved Template is selected, enqueue its CSS file
                 $template_id = intval(get_option('sardius_elementor_template_id', 0));
